@@ -44,7 +44,8 @@ class MainWindow(QtGui.QMainWindow):
     def connectWiiBoard(self):
         board = wiiboard.Wiiboard()
         try:        
-            board.connect("00:22:4C:55:A2:32") #The wii board must be in sync mode at this time
+            #The wii board must be in sync mode at this time
+            board.connect("00:22:4C:55:A2:32") 
             time.sleep(0.1)
             board.setLight(True)
             self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
@@ -58,16 +59,23 @@ class MainWindow(QtGui.QMainWindow):
     def startAcquisition(self):
         self.ui.textEdit.append(time.ctime() + " Starting acquisition")
         self.ui.textEdit.append(time.ctime() + " " + str(self.board.lastEvent.totalWeight))
-        self.render_widget.update()
         self.timer.start(1, self)
+        self.render_widget.initPoints()        
+        self.render_widget.update()
+        
+        # set acquisition limit 
+        self.acquisition_limit = 60
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
-            self.render_widget.points.append(self.get_current_position())
-        else:
-            QtGui.QFrame.timerEvent(self, event)    
+            self.render_widget.points.append(self.getCurrentPosition())
+            self.render_widget.update()
+            
+            if len(self.render_widget.points) > self.acquisition_limit:
+                self.timer.stop()
     
     def getCurrentPosition(self):
+        """returns center of mass from latest board Wii measurement"""
         last_event = self.board.lastEvent
         M=last_event.totalWeight
         TR=last_event.topRight
@@ -78,40 +86,44 @@ class MainWindow(QtGui.QMainWindow):
         L=TL+BL
         T=TR+TL
         B=BR+BL
-        return M
+        return ((R - L)/M, (T - B)/M)
         
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         super(RenderWidget, self).__init__()
         
         self.initUI()
-        
-        self.points = [(150, 150)]        
-        
+    
+        self.initPoints()
+    
+    def initPoints(self):
+        self.points = [(150, 150)]                
+    
     def initUI(self):      
-
         self.setGeometry(300, 300, 280, 170)
         self.setWindowTitle('Points')
         self.show()
         
     def paintEvent(self, e):
-
         qp = QtGui.QPainter()
         qp.begin(self)
         self.drawPoints(qp)
         qp.end()
         
     def drawPoints(self, qp):
-      
         pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
         qp.setPen(pen)
-        size = self.size()
-        for point in self.points:
+        
+        for i in range(len(self.points) - 1):
+            #size = self.size()
             #x = random.randint(1, size.width()-1)
             #y = random.randint(1, size.height()-1)
-            x,y = point
-            qp.drawPoint(x, y)         
-        
+            current_point = self.points[i]
+            next_point = self.points[i + 1]
+            x_1, y_1 = current_point
+            x_2, y_2 = next_point
+            qp.drawLine(x_1, y_1, x_2, y_2)         
+            
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
