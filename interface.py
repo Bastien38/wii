@@ -10,27 +10,38 @@ import wiiboard
 
 from PyQt4 import QtCore, QtGui, uic
 
-class MyWidget(QtGui.QMainWindow):
+class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        #somewhere in constructor:
+
+        # load the UI
         self.ui = uic.loadUi("interface.ui")
-        self.ui.show()
-        #change color of frame
-        self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
-            "Red")
-        self.timer = QtCore.QBasicTimer()
-        self.render_widget = RenderWidget()
-        self.ui.horizontalLayout_4.addWidget(self.render_widget)
+
+        # customize the UI
+        self.initUI()
+        
         #connect slots
+        self.connectSlots()
+        
+    def connectSlots(self):
         QtCore.QObject.connect(self.ui.pushButton,
                                QtCore.SIGNAL('clicked()'), 
-                               self.connect_board)
+                               self.connectWiiBoard)
         QtCore.QObject.connect(self.ui.pushButton_2,
                                QtCore.SIGNAL('clicked()'), 
-                               self.launch_acquisition)
+                               self.startAcquisition)
+
+    def initUI(self):
+        # add timer to UI
+        self.timer = QtCore.QBasicTimer()
+        # add render_widget to UI
+        self.render_widget = RenderWidget()        
+        self.ui.horizontalLayout_4.addWidget(self.render_widget)
+        #change color of UI frame to red
+        self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
+            "Red")
         
-    def connect_board(self):
+    def connectWiiBoard(self):
         board = wiiboard.Wiiboard()
         try:        
             board.connect("00:22:4C:55:A2:32") #The wii board must be in sync mode at this time
@@ -44,7 +55,7 @@ class MyWidget(QtGui.QMainWindow):
         except bluetooth.btcommon.BluetoothError:
             self.ui.textEdit.append(time.ctime() + " Connection failed")
             
-    def launch_acquisition(self):
+    def startAcquisition(self):
         self.ui.textEdit.append(time.ctime() + " Starting acquisition")
         self.ui.textEdit.append(time.ctime() + " " + str(self.board.lastEvent.totalWeight))
         self.render_widget.update()
@@ -56,18 +67,19 @@ class MyWidget(QtGui.QMainWindow):
         else:
             QtGui.QFrame.timerEvent(self, event)    
     
-    def get_current_position(self):
-        self.board.lastEvent
-        #TODO
-        M=event.mass.totalWeight
-                    TR=event.mass.topRight
-                    TL=event.mass.topLeft
-                    BR=event.mass.bottomRight
-                    BL=event.mass.bottomLeft
-                    R=TR+BR
-                    L=TL+BL
-                    T=TR+TL
-                    B=BR+BL
+    def getCurrentPosition(self):
+        last_event = self.board.lastEvent
+        M=last_event.totalWeight
+        TR=last_event.topRight
+        TL=last_event.topLeft
+        BR=last_event.bottomRight
+        BL=last_event.bottomLeft
+        R=TR+BR
+        L=TL+BL
+        T=TR+TL
+        B=BR+BL
+        return M
+        
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         super(RenderWidget, self).__init__()
@@ -92,11 +104,8 @@ class RenderWidget(QtGui.QWidget):
     def drawPoints(self, qp):
       
         pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
-
         qp.setPen(pen)
-
         size = self.size()
-        
         for point in self.points:
             #x = random.randint(1, size.width()-1)
             #y = random.randint(1, size.height()-1)
@@ -105,5 +114,6 @@ class RenderWidget(QtGui.QWidget):
         
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
-    window = MyWidget()
+    window = MainWindow()
+    window.show()
     sys.exit(app.exec_())
