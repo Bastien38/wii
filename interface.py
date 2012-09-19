@@ -4,9 +4,10 @@ Created on Fri Sep 14 21:45:26 2012
 
 @author: bastien
 """
-import random
+
 import sys, time, bluetooth
 import wiiboard
+
 
 from PyQt4 import QtCore, QtGui, uic
 
@@ -16,7 +17,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # load the UI
         self.ui = uic.loadUi("interface.ui")
-
+        self.ui.show()
+        
         # customize the UI
         self.initUI()
         
@@ -31,7 +33,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('clicked()'), 
                                self.startAcquisition)
 
-    def initUI(self):
+    def initUI(self):    
         # add timer to UI
         self.timer = QtCore.QBasicTimer()
         # add render_widget to UI
@@ -64,7 +66,7 @@ class MainWindow(QtGui.QMainWindow):
         self.render_widget.update()
         
         # set acquisition limit 
-        self.acquisition_limit = 60
+        self.acquisition_limit = 600
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
@@ -73,6 +75,9 @@ class MainWindow(QtGui.QMainWindow):
             
             if len(self.render_widget.points) > self.acquisition_limit:
                 self.timer.stop()
+                self.ui.textEdit.append(time.ctime() + " Stopping acquisition")
+                np.save('test.npy', self.render_widget.points)
+                
     
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
@@ -86,8 +91,11 @@ class MainWindow(QtGui.QMainWindow):
         L=TL+BL
         T=TR+TL
         B=BR+BL
-        return ((R - L)/M, (T - B)/M)
-        
+        if M>0:
+            return (time.time(),215*(R - L)/M, 117.5*(T - B)/M)
+        else:
+            return (0,0)
+            
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         super(RenderWidget, self).__init__()
@@ -97,7 +105,7 @@ class RenderWidget(QtGui.QWidget):
         self.initPoints()
     
     def initPoints(self):
-        self.points = [(150, 150)]                
+        self.points = [(time.time(),0, 0)]                
     
     def initUI(self):      
         self.setGeometry(300, 300, 280, 170)
@@ -118,11 +126,14 @@ class RenderWidget(QtGui.QWidget):
             #size = self.size()
             #x = random.randint(1, size.width()-1)
             #y = random.randint(1, size.height()-1)
-            current_point = self.points[i]
-            next_point = self.points[i + 1]
+            current_point = self.points[i][1:3]
+            next_point = self.points[i + 1][1:3]
             x_1, y_1 = current_point
             x_2, y_2 = next_point
             qp.drawLine(x_1, y_1, x_2, y_2)         
+            
+#a=np.load('test.npy');
+#plot(a[:,1],a[:,2])            
             
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
