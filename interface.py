@@ -16,8 +16,7 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
 
         # load the UI
-        self.ui = uic.loadUi("interface.ui")
-        self.ui.show()
+        self.ui = uic.loadUi("interface.ui", self)
         
         # customize the UI
         self.initUI()
