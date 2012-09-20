@@ -7,7 +7,7 @@ Created on Fri Sep 14 21:45:26 2012
 
 import sys, time, bluetooth
 import wiiboard
-
+import numpy as np
 
 from PyQt4 import QtCore, QtGui, uic
 
@@ -91,9 +91,9 @@ class MainWindow(QtGui.QMainWindow):
         T=TR+TL
         B=BR+BL
         if M>0:
-            return (time.time(),215*(R - L)/M, 117.5*(T - B)/M)
+            return (time.time(), 215*(R - L)/M, 117.5*(T - B)/M)
         else:
-            return (0,0)
+            return (time.time(), 0,0)
             
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
@@ -104,7 +104,7 @@ class RenderWidget(QtGui.QWidget):
         self.initPoints()
     
     def initPoints(self):
-        self.points = [(time.time(),0, 0)]                
+        self.points = [(time.time(), 0, 0)]                
     
     def initUI(self):      
         self.setGeometry(300, 300, 280, 170)
@@ -120,16 +120,13 @@ class RenderWidget(QtGui.QWidget):
     def drawPoints(self, qp):
         pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
         qp.setPen(pen)
-        
+        scale_x = 1.0
+        scale_y = 1.0
         for i in range(len(self.points) - 1):
-            #size = self.size()
-            #x = random.randint(1, size.width()-1)
-            #y = random.randint(1, size.height()-1)
-            current_point = self.points[i][1:3]
-            next_point = self.points[i + 1][1:3]
-            x_1, y_1 = current_point
-            x_2, y_2 = next_point
-            qp.drawLine(x_1, y_1, x_2, y_2)         
+            x_1, y_1 = self.points[i][1:3]
+            x_2, y_2 = self.points[i + 1][1:3]
+            qp.drawLine(x_1 * scale_x, y_1 * scale_y, 
+                        x_2 * scale_x, y_2 * scale_y)         
             
 #a=np.load('test.npy');
 #plot(a[:,1],a[:,2])            
