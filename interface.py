@@ -49,7 +49,7 @@ class MainWindow(QtGui.QMainWindow):
             "Red")
         
         # analysis tab
-        self.analysis_widget = RenderWidget()
+        self.analysis_widget = AnalysisWidget()
         self.ui.tab_2.layout().addWidget(self.analysis_widget)
         
     def connectWiiBoard(self):
@@ -163,7 +163,12 @@ class AnalysisWidget(QtGui.QWidget):
         self.fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
         self.canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self)
-        self.axes = self.fig.add_subplot(111)
+        
+        axes_x = self.fig.add_subplot(221)
+        axes_y = self.fig.add_subplot(222)
+        axes_xy = self.fig.add_subplot(212)
+    
+        self.axes = [axes_x, axes_y, axes_xy]        
         
         mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(self.canvas, self)
         
@@ -174,11 +179,10 @@ class AnalysisWidget(QtGui.QWidget):
         self.setLayout(vbox)
     
     def paintEvent(self, e):
-        self.axes.clear()  
-        self.axes.grid(True)
-        x = [point[1] for point in self.points]
-        y = [point[2] for point in self.points]
-        self.axes.plot(x, y, "o-") 
+        for ax in self.axes:        
+            ax.clear()  
+            ax.grid(True)
+        
         self.canvas.draw() 
         
 #a=np.load('test.npy');
