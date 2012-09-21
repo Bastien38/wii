@@ -63,7 +63,7 @@ def lp_filter(xn):
     return filtfilt(b, a, xn)
     
 if __name__ == "__main__":
-    data = np.load("test.npy")
+    data = np.load("acquisition_florian.npy")
     t = data[:, 0]
     dt = t[1:] - t[:-1]
     t = np.concatenate((np.array([0.]), np.cumsum(dt)))
@@ -90,14 +90,14 @@ if __name__ == "__main__":
     filt_y = lp_filter(new_y)
     
     clf()
-#    subplot(2, 2, 1)
-#    plot(t, x, 'o-')
-#    plot(filt_t, filt_x, 'o')
-#    subplot(2, 2, 2)
-#    plot(t, y, 'o-')
-#    plot(filt_t, filt_y, 'o')
-#    subplot(2, 1, 2)
-    subplot(2, 1, 1)    
-    plot(x, y, 'o-')
+    subplot(2, 2, 1)
+    #plot(t, x, 'o-')
+    plot(filt_t, filt_x, 'o')
+    subplot(2, 2, 2)
+    #plot(t, y, 'o-')
+    plot(filt_t, filt_y, 'o')
     subplot(2, 1, 2)
+#    subplot(2, 1, 1)    
+#    plot(x, y, 'o-')
+#    subplot(2, 1, 2)
     plot(filt_x, filt_y, 'o-')

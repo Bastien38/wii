@@ -11,11 +11,12 @@ import numpy as np
 import matplotlib.figure
 import matplotlib.backends.backend_qt4agg
 from PyQt4 import QtCore, QtGui, uic
+import os.path 
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-
+        
         # load the UI
         self.ui = uic.loadUi("interface.ui", self)
         
@@ -32,8 +33,12 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.ui.pushButton_2,
                                QtCore.SIGNAL('clicked()'), 
                                self.startAcquisition)
+        QtCore.QObject.connect(self.ui.pushButton_3,
+                               QtCore.SIGNAL('clicked()'),
+                                self.loadLatestAcquisition)
 
     def initUI(self):    
+        # acquisition tab
         # add timer to UI
         self.timer = QtCore.QBasicTimer()
         # add render_widget to UI
@@ -42,6 +47,10 @@ class MainWindow(QtGui.QMainWindow):
         #change color of UI frame to red
         self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
             "Red")
+        
+        # analysis tab
+        self.analysis_widget = RenderWidget()
+        self.ui.tab_2.layout().addWidget(self.analysis_widget)
         
     def connectWiiBoard(self):
         board = wiiboard.Wiiboard()
@@ -76,7 +85,7 @@ class MainWindow(QtGui.QMainWindow):
             if len(self.render_widget.points) > self.acquisition_limit:
                 self.timer.stop()
                 self.ui.textEdit.append(time.ctime() + " Stopping acquisition")
-                np.save('acquistion.npy', self.render_widget.points)
+                np.save('acquisition.npy', self.render_widget.points)
                 
     
     def getCurrentPosition(self):
@@ -95,6 +104,18 @@ class MainWindow(QtGui.QMainWindow):
             return (time.time(), 215*(R - L)/M, 117.5*(T - B)/M)
         else:
             return (time.time(), 0,0)
+    
+    def loadLatestAcquisition(self):
+        if os.path.exists('acquisition.npy'):
+            try:
+                data = np.load('acquisition.npy')
+                self.analysis_widget.points = [(x[0], x[1], x[2]) for x in data]
+                self.analysis_widget.update()
+            except:
+                print "error reading file"
+        else:
+            print "could not find acquisition file"
+        
             
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
