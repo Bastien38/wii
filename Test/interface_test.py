@@ -111,16 +111,6 @@ class RenderWidget(QtGui.QWidget):
         self.setLayout(vbox)
         
     def paintEvent(self, e):
-#        qp = QtGui.QPainter()
-#        qp.begin(self)
-#        pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
-#        qp.setPen(pen)
-#        if len(self.points) > 1:
-#            for i in range(len(self.points) - 1):
-#                x_1, y_1 = self.points[i][1:3]
-#                x_2, y_2 = self.points[i + 1][1:3]
-#                qp.drawLine(x_1, y_1, x_2, y_2)         
-#        qp.end()
         self.axes.clear()        
         x = [point[1] for point in self.points]
         y = [point[2] for point in self.points]
