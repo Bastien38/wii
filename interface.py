@@ -110,7 +110,7 @@ class RenderWidget(QtGui.QWidget):
     def initUI(self): 
         dpi = 100
         matplotlib.figure.Figure()
-        fig = matplotlib.figure.Figure((4.0, 3.0), dpi)
+        fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
         canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
         canvas.setParent(self)
         self.canvas = canvas
