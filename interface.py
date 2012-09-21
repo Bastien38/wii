@@ -151,7 +151,36 @@ class RenderWidget(QtGui.QWidget):
         y = [point[2] for point in self.points]
         self.axes.plot(x, y, "o-") 
         self.canvas.draw()    
-            
+    
+class AnalysisWidget(QtGui.QWidget):
+    def __init__(self):
+        QtGui.QWidget.__init__(self)
+        
+        self.initUI()
+    
+    def initUI(self):
+        dpi = 100
+        self.fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
+        self.canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(self.fig)
+        self.canvas.setParent(self)
+        self.axes = self.fig.add_subplot(111)
+        
+        mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(self.canvas, self)
+        
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(self.canvas)
+        vbox.addWidget(mpl_toolbar)
+        
+        self.setLayout(vbox)
+    
+    def paintEvent(self, e):
+        self.axes.clear()  
+        self.axes.grid(True)
+        x = [point[1] for point in self.points]
+        y = [point[2] for point in self.points]
+        self.axes.plot(x, y, "o-") 
+        self.canvas.draw() 
+        
 #a=np.load('test.npy');
 #plot(a[:,1],a[:,2])            
             
