@@ -223,10 +223,28 @@ class AnalysisWidget(QtGui.QWidget):
             for ax in self.axes:        
                 ax.clear()  
                 ax.grid(True)
+
+            # x data
             self.axes[0].plot(t, x)
             self.axes[0].set_title("x displacement")
+            self.axes[0].plot(t, x.min() * np.ones(x.shape))
+            self.axes[0].text(t.max(), 1.05 * x.min(), '%d'%int(x.min()),
+                ha='center', va='bottom')
+            self.axes[0].plot(t, x.max() * np.ones(x.shape))            
+            self.axes[0].text(t.max(), 1.05 * x.max(), '%d'%int(x.max()),
+                ha='center', va='top')
+
+            # y data
             self.axes[1].plot(t, y)
             self.axes[1].set_title("y displacement")
+            self.axes[1].plot(t, y.min() * np.ones(y.shape))
+            self.axes[1].text(t.max(), 1.05 * y.min(), '%d'%int(y.min()),
+                ha='center', va='bottom')
+            self.axes[1].plot(t, y.max() * np.ones(y.shape))            
+            self.axes[1].text(t.max(), 1.05 * y.max(), '%d'%int(y.max()),
+                ha='center', va='top')
+            
+            # xy data
             self.axes[2].plot(x, y, "bo-")
             self.axes[2].set_title("x-y coordinates")
         
