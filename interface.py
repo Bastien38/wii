@@ -37,6 +37,10 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('clicked()'),
                                 self.loadLatestAcquisition)
 
+        QtCore.QObject.connect(self.ui.pushButton_4,
+                               QtCore.SIGNAL('clicked()'),
+                                self.loadAcquisitionFileFromDisk)
+
     def initUI(self):    
         # acquisition tab
         # add timer to UI
@@ -109,14 +113,26 @@ class MainWindow(QtGui.QMainWindow):
         if os.path.exists('acquisition.npy'):
             try:
                 data = np.load('acquisition.npy')
-                self.analysis_widget.points = [(x[0], x[1], x[2]) for x in data]
-                self.analysis_widget.update()
+                self.analysis_widget.data = [(x[0], x[1], x[2]) for x in data]
+                self.analysis_widget.redraw()
             except:
                 print "error reading file"
         else:
             print "could not find acquisition file"
         
-            
+    def loadAcquisitionFileFromDisk(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self, "Open Image", filter="Numpy files (*.npy)")
+        print filename
+        if os.path.exists(filename): 
+            try:
+                data = np.load(str(filename))
+                self.analysis_widget.data = [(x[0], x[1], x[2]) for x in data]
+                self.analysis_widget.redraw()
+            except:
+                print "error reading file"
+        else:
+            print "could not find acquisition file"
+        QtCore.QString.toUtf8
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -156,8 +172,12 @@ class AnalysisWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
         
+        self.initData()
+
         self.initUI()
     
+        
+        
     def initUI(self):
         dpi = 100
         self.fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
@@ -177,17 +197,26 @@ class AnalysisWidget(QtGui.QWidget):
         vbox.addWidget(mpl_toolbar)
         
         self.setLayout(vbox)
-    
-    def paintEvent(self, e):
-        for ax in self.axes:        
-            ax.clear()  
-            ax.grid(True)
+        self.redraw()
         
+    def initData(self):
+        self.data = []
+
+    def redraw(self):
+        if self.data != []:        
+            t = [item[0] for item in self.data]
+            x = [item[1] for item in self.data]
+            y = [item[2] for item in self.data]
+            for ax in self.axes:        
+                ax.clear()  
+                ax.grid(True)
+            self.axes[0].plot(t, x)
+            self.axes[1].plot(t, y)
+            self.axes[2].plot(x, y, "bo-")
+        
+
         self.canvas.draw() 
-        
-#a=np.load('test.npy');
-#plot(a[:,1],a[:,2])            
-            
+                    
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
