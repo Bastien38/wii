@@ -105,7 +105,7 @@ class RenderWidget(QtGui.QWidget):
         self.initPoints()
     
     def initPoints(self):
-        self.points = [(time.time(), 0, 0)]                
+        self.points = []                
     
     def initUI(self): 
         dpi = 100
