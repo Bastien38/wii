@@ -76,7 +76,7 @@ class MainWindow(QtGui.QMainWindow):
             if len(self.render_widget.points) > self.acquisition_limit:
                 self.timer.stop()
                 self.ui.textEdit.append(time.ctime() + " Stopping acquisition")
-                np.save('test.npy', self.render_widget.points)
+                np.save('acquistion.npy', self.render_widget.points)
                 
     
     def getCurrentPosition(self):
