@@ -12,6 +12,7 @@ import matplotlib.figure
 import matplotlib.backends.backend_qt4agg
 from PyQt4 import QtCore, QtGui, uic
 import os.path 
+from scipy.signal import filtfilt, butter
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -40,6 +41,10 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.ui.pushButton_4,
                                QtCore.SIGNAL('clicked()'),
                                 self.loadAcquisitionFileFromDisk)
+                                
+        QtCore.QObject.connect(self.ui.pushButton_6,
+                               QtCore.SIGNAL('clicked()'),
+                                self.analysis_widget.smoothData)
 
     def initUI(self):    
         # acquisition tab
@@ -109,11 +114,19 @@ class MainWindow(QtGui.QMainWindow):
         else:
             return (time.time(), 0,0)
     
+    def loadData(self, filename):
+        data = np.load(filename)        
+        t = data[:, 0]
+        dt = t[1:] - t[:-1]
+        t = np.concatenate((np.array([0.]), np.cumsum(dt)))
+        x = data[:, 1]
+        y = data[:, 2]
+        return (t, x, y)
+        
     def loadLatestAcquisition(self):
         if os.path.exists('acquisition.npy'):
             try:
-                data = np.load('acquisition.npy')
-                self.analysis_widget.data = [(x[0], x[1], x[2]) for x in data]
+                self.analysis_widget.data = self.loadData('acquisition.npy')
                 self.analysis_widget.redraw()
             except:
                 print "error reading file"
@@ -121,18 +134,18 @@ class MainWindow(QtGui.QMainWindow):
             print "could not find acquisition file"
         
     def loadAcquisitionFileFromDisk(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self, "Open Image", filter="Numpy files (*.npy)")
-        print filename
+        filename = QtGui.QFileDialog.getOpenFileName(self, 
+                                                     "Open acquisition",
+                                                     filter="Numpy files (*.npy)")
         if os.path.exists(filename): 
             try:
-                data = np.load(str(filename))
-                self.analysis_widget.data = [(x[0], x[1], x[2]) for x in data]
+                self.analysis_widget.data = self.loadData(str(filename))
                 self.analysis_widget.redraw()
             except:
                 print "error reading file"
         else:
             print "could not find acquisition file"
-        QtCore.QString.toUtf8
+        
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -204,19 +217,29 @@ class AnalysisWidget(QtGui.QWidget):
 
     def redraw(self):
         if self.data != []:        
-            t = [item[0] for item in self.data]
-            x = [item[1] for item in self.data]
-            y = [item[2] for item in self.data]
+            t = self.data[0]
+            x = self.data[1]
+            y = self.data[2]
             for ax in self.axes:        
                 ax.clear()  
                 ax.grid(True)
             self.axes[0].plot(t, x)
+            self.axes[0].set_xlabel("time")
             self.axes[1].plot(t, y)
             self.axes[2].plot(x, y, "bo-")
         
-
         self.canvas.draw() 
-                    
+        
+    def smoothData(self):
+        def lp_filter(xn):
+            b, a = butter(3, 0.05)
+            return filtfilt(b, a, xn)
+        new_t = lp_filter(self.data[0])
+        new_x = lp_filter(self.data[1])
+        new_y = lp_filter(self.data[2])
+        self.data = (new_t, new_x, new_y)
+        self.redraw()
+        
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
