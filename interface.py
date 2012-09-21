@@ -42,7 +42,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('clicked()'),
                                 self.loadAcquisitionFileFromDisk)
                                 
-        QtCore.QObject.connect(self.ui.pushButton_6,
+        QtCore.QObject.connect(self.ui.pushButton_5,
                                QtCore.SIGNAL('clicked()'),
                                 self.analysis_widget.smoothData)
 
@@ -224,9 +224,11 @@ class AnalysisWidget(QtGui.QWidget):
                 ax.clear()  
                 ax.grid(True)
             self.axes[0].plot(t, x)
-            self.axes[0].set_xlabel("time")
+            self.axes[0].set_title("x displacement")
             self.axes[1].plot(t, y)
+            self.axes[1].set_title("y displacement")
             self.axes[2].plot(x, y, "bo-")
+            self.axes[2].set_title("x-y coordinates")
         
         self.canvas.draw() 
         
