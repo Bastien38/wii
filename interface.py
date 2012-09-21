@@ -124,7 +124,8 @@ class RenderWidget(QtGui.QWidget):
         self.setLayout(vbox)
         
     def paintEvent(self, e):
-        self.axes.clear()        
+        self.axes.clear()  
+        self.axes.grid(True)
         x = [point[1] for point in self.points]
         y = [point[2] for point in self.points]
         self.axes.plot(x, y, "o-") 
