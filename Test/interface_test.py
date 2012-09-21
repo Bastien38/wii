@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 """
+Created on Thu Sep 20 10:08:44 2012
+
+@author: FL232714
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Fri Sep 14 21:45:26 2012
 
 @author: bastien
 """
 
-import sys, time, bluetooth
-import wiiboard
+import sys, time
+import random
 import numpy as np
+from PyQt4 import QtCore, QtGui, uic
 import matplotlib.figure
 import matplotlib.backends.backend_qt4agg
-from PyQt4 import QtCore, QtGui, uic
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -44,23 +51,14 @@ class MainWindow(QtGui.QMainWindow):
             "Red")
         
     def connectWiiBoard(self):
-        board = wiiboard.Wiiboard()
-        try:        
-            #The wii board must be in sync mode at this time
-            board.connect("00:22:4C:55:A2:32") 
-            time.sleep(0.1)
-            board.setLight(True)
-            self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
-            "Green")
-            self.board = board
-            self.ui.textEdit.append(time.ctime() + " Connection successful")
+        self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
+        "Green")
+
+        self.ui.textEdit.append(time.ctime() + " Connection successful")
             
-        except bluetooth.btcommon.BluetoothError:
-            self.ui.textEdit.append(time.ctime() + " Connection failed")
             
     def startAcquisition(self):
         self.ui.textEdit.append(time.ctime() + " Starting acquisition")
-        self.ui.textEdit.append(time.ctime() + " " + str(self.board.lastEvent.totalWeight))
         self.timer.start(1, self)
         self.render_widget.initPoints()        
         self.render_widget.update()
@@ -81,20 +79,9 @@ class MainWindow(QtGui.QMainWindow):
     
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
-        last_event = self.board.lastEvent
-        M=last_event.totalWeight
-        TR=last_event.topRight
-        TL=last_event.topLeft
-        BR=last_event.bottomRight
-        BL=last_event.bottomLeft
-        R=TR+BR
-        L=TL+BL
-        T=TR+TL
-        B=BR+BL
-        if M>0:
-            return (time.time(), 215*(R - L)/M, 117.5*(T - B)/M)
-        else:
-            return (time.time(), 0,0)
+        return (time.time(),
+                0.4 * np.cos(1.9 * time.time()),
+                0.3 * np.sin(0.87 * time.time()))
             
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
@@ -110,7 +97,7 @@ class RenderWidget(QtGui.QWidget):
     def initUI(self): 
         dpi = 100
         matplotlib.figure.Figure()
-        fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
+        fig = matplotlib.figure.Figure((4.0, 3.0), dpi)
         canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
         canvas.setParent(self)
         self.canvas = canvas
@@ -128,11 +115,8 @@ class RenderWidget(QtGui.QWidget):
         x = [point[1] for point in self.points]
         y = [point[2] for point in self.points]
         self.axes.plot(x, y, "o-") 
-        self.canvas.draw()    
-            
-#a=np.load('test.npy');
-#plot(a[:,1],a[:,2])            
-            
+        self.canvas.draw()
+        
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
