@@ -8,7 +8,8 @@ Created on Fri Sep 14 21:45:26 2012
 import sys, time, bluetooth
 import wiiboard
 import numpy as np
-
+import matplotlib.figure
+import matplotlib.backends.backend_qt4agg
 from PyQt4 import QtCore, QtGui, uic
 
 class MainWindow(QtGui.QMainWindow):
@@ -97,7 +98,7 @@ class MainWindow(QtGui.QMainWindow):
             
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
-        super(RenderWidget, self).__init__()
+        QtGui.QWidget.__init__(self)
         
         self.initUI()
     
@@ -106,27 +107,28 @@ class RenderWidget(QtGui.QWidget):
     def initPoints(self):
         self.points = [(time.time(), 0, 0)]                
     
-    def initUI(self):      
-        self.setGeometry(300, 300, 280, 170)
-        self.setWindowTitle('Points')
-        self.show()
+    def initUI(self): 
+        dpi = 100
+        matplotlib.figure.Figure()
+        fig = matplotlib.figure.Figure((4.0, 3.0), dpi)
+        canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
+        canvas.setParent(self)
+        self.canvas = canvas
+        self.axes = fig.add_subplot(111)
+        mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(canvas, self)
+        
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(canvas)
+        vbox.addWidget(mpl_toolbar)
+        
+        self.setLayout(vbox)
         
     def paintEvent(self, e):
-        qp = QtGui.QPainter()
-        qp.begin(self)
-        self.drawPoints(qp)
-        qp.end()
-        
-    def drawPoints(self, qp):
-        pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
-        qp.setPen(pen)
-        scale_x = 1.0
-        scale_y = 1.0
-        for i in range(len(self.points) - 1):
-            x_1, y_1 = self.points[i][1:3]
-            x_2, y_2 = self.points[i + 1][1:3]
-            qp.drawLine(x_1 * scale_x, y_1 * scale_y, 
-                        x_2 * scale_x, y_2 * scale_y)         
+        self.axes.clear()        
+        x = [point[1] for point in self.points]
+        y = [point[2] for point in self.points]
+        self.axes.plot(x, y, "o-") 
+        self.canvas.draw()    
             
 #a=np.load('test.npy');
 #plot(a[:,1],a[:,2])            
