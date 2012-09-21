@@ -16,6 +16,8 @@ import sys, time
 import random
 import numpy as np
 from PyQt4 import QtCore, QtGui, uic
+import matplotlib.figure
+import matplotlib.backends.backend_qt4agg
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -77,11 +79,13 @@ class MainWindow(QtGui.QMainWindow):
     
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
-        return (time.time(), random.randint(0, 300), random.randint(0, 500))
+        return (time.time(),
+                0.4 * np.cos(1.9 * time.time()),
+                0.3 * np.sin(0.87 * time.time()))
             
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
-        super(RenderWidget, self).__init__()
+        QtGui.QWidget.__init__(self)
         
         self.initUI()
     
@@ -90,28 +94,39 @@ class RenderWidget(QtGui.QWidget):
     def initPoints(self):
         self.points = [(time.time(), 0, 0)]                
     
-    def initUI(self):      
-        self.setGeometry(300, 300, 280, 170)
-        self.setWindowTitle('Points')
+    def initUI(self): 
+        dpi = 100
+        matplotlib.figure.Figure()
+        fig = matplotlib.figure.Figure((4.0, 3.0), dpi)
+        canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
+        canvas.setParent(self)
+        self.canvas = canvas
+        self.axes = fig.add_subplot(111)
+        mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(canvas, self)
+        
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(canvas)
+        vbox.addWidget(mpl_toolbar)
+        
+        self.setLayout(vbox)
         
     def paintEvent(self, e):
-        qp = QtGui.QPainter()
-        qp.begin(self)
-        self.drawPoints(qp)
-        qp.end()
+#        qp = QtGui.QPainter()
+#        qp.begin(self)
+#        pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
+#        qp.setPen(pen)
+#        if len(self.points) > 1:
+#            for i in range(len(self.points) - 1):
+#                x_1, y_1 = self.points[i][1:3]
+#                x_2, y_2 = self.points[i + 1][1:3]
+#                qp.drawLine(x_1, y_1, x_2, y_2)         
+#        qp.end()
+        self.axes.clear()        
+        x = [point[1] for point in self.points]
+        y = [point[2] for point in self.points]
+        self.axes.plot(x, y, "o-") 
+        self.canvas.draw()
         
-    def drawPoints(self, qp):
-        pen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
-        qp.setPen(pen)
-        if len(self.points) > 1:
-            for i in range(len(self.points) - 1):
-                x_1, y_1 = self.points[i][1:3]
-                x_2, y_2 = self.points[i + 1][1:3]
-                qp.drawLine(x_1, y_1, x_2, y_2)         
-                
-#a=np.load('test.npy');
-#plot(a[:,1],a[:,2])            
-            
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
