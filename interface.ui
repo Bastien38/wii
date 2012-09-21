@@ -117,6 +117,20 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_5">
+              <property name="text">
+               <string>Filter outliers</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_6">
+              <property name="text">
+               <string>Smooth acquisition data</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
