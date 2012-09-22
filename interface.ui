@@ -94,6 +94,11 @@
                 <string>Lancer l'acquisition</string>
                </property>
               </widget>
+              <widget class="QPushButton" name="pushButton_6">
+               <property name="text">
+                <string>Enregistrer l'acquisition sous</string>
+               </property>
+              </widget>
              </widget>
             </item>
            </layout>
