@@ -126,6 +126,7 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 self.timer.stop()
                 self.logMessage("Stopping acquisition")
+                self.render_widget.redraw()
                 
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
@@ -166,13 +167,13 @@ class MainWindow(QtGui.QMainWindow):
     def loadAcquisitionFile(self, filename):
         if os.path.exists(filename): 
             try:
-                self.analysis_widget.data = self.loadData(filename)
-                self.analysis_widget.redraw()
+                self.analysis_widget.data = self.loadData(filename)                
                 self.logMessage("Loaded file " + filename)
             except:
                 self.logMessage("Error reading file " + filename)
         else:
             self.logMessage("Could not find file " + filename)
+        self.analysis_widget.redraw()
         
     def saveAcquisitionAs(self):
         if not self.acquisition_mode_on and self.render_widget.points != []:
@@ -240,9 +241,10 @@ class AnalysisWidget(QtGui.QWidget):
         axes_xy = self.fig.add_subplot(233)
     
         axes_x_fft = self.fig.add_subplot(234)
+        axes_y_fft = self.fig.add_subplot(235)
         
         self.axes = [axes_x, axes_y, axes_xy,
-                     axes_x_fft]        
+                     axes_x_fft, axes_y_fft]        
         
         mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(self.canvas, self)
         
@@ -291,11 +293,17 @@ class AnalysisWidget(QtGui.QWidget):
 
             sampling_freq = 100        
             (t, x, y) = self.resampleData(sampling_freq)
+            
             # x fft data
             self.axes[3].psd(x, NFFT=len(t), pad_to=len(t), Fs=sampling_freq)
-            self.axes[3].psd(y, NFFT=len(t), pad_to=len(t)*2, Fs=sampling_freq)
-            self.axes[3].psd(y, NFFT=len(t), pad_to=len(t)*4, Fs=sampling_freq)
-            self.axes[3].set_title('zero padding x displacement')
+            self.axes[3].set_xlim(0, 5)            
+            self.axes[3].set_title('x displacement')
+            
+            # y fft data
+            self.axes[4].psd(y, NFFT=len(t), pad_to=len(t), Fs=sampling_freq)
+            self.axes[4].set_xlim(0, 5)
+            self.axes[4].set_title('y displacement')
+                        
             self.canvas.draw() 
         
     def smoothData(self):
@@ -318,7 +326,9 @@ class AnalysisWidget(QtGui.QWidget):
     
             new_t = np.linspace(0, delta_t, np.ceil(delta_t * sampling_freq))
             def interp(data):
-                return interp1d(new_t, data, kind='linear', bounds_error=False, fill_value = 0)
+                interpolation = interp1d(t, data, kind='linear', bounds_error=False, fill_value = 0)
+                return interpolation(new_t)
+            
             new_x = interp(x)
             new_y = interp(y)
         return (new_t, new_x, new_y)
