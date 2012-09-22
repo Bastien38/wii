@@ -53,6 +53,7 @@ class MainWindow(QtGui.QMainWindow):
         self.acquisition_mode_on = False 
         self.board = wiiboard.Wiiboard()
         self.acquisition_limit = 600
+        self.save_filename = "acquisition.npy"
         
     def connectSlots(self):
         QtCore.QObject.connect(self.ui.pushButton,
@@ -140,27 +141,25 @@ class MainWindow(QtGui.QMainWindow):
         return (t, x, y)
         
     def loadLatestAcquisition(self):
-        if os.path.exists('acquisition.npy'):
-            try:
-                self.analysis_widget.data = self.loadData('acquisition.npy')
-                self.analysis_widget.redraw()
-            except:
-                self.logMessage("Error reading acquisition file")
-        else:
-            self.logMessage("Could not find acquisition file")
+        filename = self.save_filename
+        self.loadAcquisitionFile(filename)
         
     def loadAcquisitionFileFromDisk(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 
                                                      "Open acquisition",
                                                      filter="Numpy files (*.npy)")
+        self.loadAcquisitionFile(str(filename))
+        
+    def loadAcquisitionFile(self, filename):
         if os.path.exists(filename): 
             try:
-                self.analysis_widget.data = self.loadData(str(filename))
+                self.analysis_widget.data = self.loadData(filename)
                 self.analysis_widget.redraw()
+                self.logMessage("Loaded file " + filename)
             except:
-                self.logMessage("Error reading acquisition file")
+                self.logMessage("Error reading file " + filename)
         else:
-            self.logMessage("Could not find acquisition file")
+            self.logMessage("Could not find file " + filename)
         
         
 class RenderWidget(QtGui.QWidget):
