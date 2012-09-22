@@ -52,8 +52,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def initData(self):
         self.acquisition_mode_on = False 
-        self.board = wiiboard.Wiiboard()
-        self.acquisition_limit = 600
+        self.board = wiiboard.Wiiboard()        
+        self.time_out = 1000. / self.ui.spinBox.value()        
+        self.acquisition_limit = self.ui.spinBox.value() * self.ui.spinBox_2.value()        
         self.save_filename = "acquisition.npy"
         
     def connectSlots(self):
@@ -105,24 +106,34 @@ class MainWindow(QtGui.QMainWindow):
                 self.logMessage("Could not start acquisition because Wii board is not connected")
             else:
                 self.logMessage("Starting acquisition")
-                self.timer.start(1, self)
+                self.time_out = 1000. / self.ui.spinBox.value()        
+                self.acquisition_limit = self.ui.spinBox.value() * self.ui.spinBox_2.value()
+                self.timer.start(self.time_out, self)
                 self.render_widget.initPoints()        
                 self.render_widget.update()
                 self.acquisition_mode_on = True
                 self.ui.pushButton_2.setText(u"Stopper l'acquisition")
-            
+                self.progress = QtGui.QProgressDialog("Acquisition en cours",
+                                                 "Stopper l'acquisition",
+                                                 0,
+                                                 self.acquisition_limit,
+                                                 self)
+                
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
             if self.acquisition_mode_on:
                 self.render_widget.points.append(self.getCurrentPosition())
-                self.render_widget.redraw()
+                self.progress.setValue(len(self.render_widget.points))                
+                #self.render_widget.redraw()
                 
-                if len(self.render_widget.points) > self.acquisition_limit:
+                if len(self.render_widget.points) >= self.acquisition_limit:
                     self.timer.stop()
                     self.logMessage("Stopping acquisition")
                     np.save(self.save_filename, self.render_widget.points)
                     self.logMessage("Autosaving acquisition to " + self.save_filename)
+                    self.acquisition_mode_on = False                    
+                    self.ui.pushButton_2.setText(u"Lancer l'acquisition")
             else:
                 self.timer.stop()
                 self.logMessage("Stopping acquisition")
@@ -291,7 +302,7 @@ class AnalysisWidget(QtGui.QWidget):
             self.axes[2].plot(x, y, "bo-")
             self.axes[2].set_title("x-y coordinates")
 
-            sampling_freq = 100        
+            sampling_freq = 500        
             (t, x, y) = self.resampleData(sampling_freq)
             
             # x fft data
