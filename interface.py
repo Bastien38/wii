@@ -24,8 +24,11 @@ class MainWindow(QtGui.QMainWindow):
         # customize the UI
         self.initUI()
         
-        #connect slots
+        # connect slots
         self.connectSlots()
+        
+        # maximize window
+        self.setWindowState(QtCore.Qt.WindowMaximized)        
         
     def connectSlots(self):
         QtCore.QObject.connect(self.ui.pushButton,
