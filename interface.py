@@ -177,9 +177,11 @@ class MainWindow(QtGui.QMainWindow):
         if not self.acquisition_mode_on and self.render_widget.points != []:
             filename = QtGui.QFileDialog.getSaveFileNameAndFilter(self,
                                                                   "Sauvegarder acquisition",
-                                                                  filter="Numpy files (*.npy)")
+                                                                  filter=".npy")
+            filename =  str(filename[0] + filename[1])
             np.save(filename, self.render_widget.points)
-            self.logMessage("Saving acquisition to " + self.filename)
+            self.logMessage("Saving acquisition to " + filename)
+            
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
