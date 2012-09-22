@@ -106,21 +106,21 @@
             <item>
              <widget class="QPushButton" name="pushButton_3">
               <property name="text">
-               <string>Load latest acquisition</string>
+               <string>Charger la dernière acquisition</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_4">
               <property name="text">
-               <string>Load file from disk</string>
+               <string>Charger un fichier</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_5">
               <property name="text">
-               <string>Smooth acquisition data</string>
+               <string>Lisser les données</string>
               </property>
              </widget>
             </item>
