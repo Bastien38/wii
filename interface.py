@@ -115,7 +115,7 @@ class MainWindow(QtGui.QMainWindow):
         if event.timerId() == self.timer.timerId():
             if self.acquisition_mode_on:
                 self.render_widget.points.append(self.getCurrentPosition())
-                self.render_widget.update()
+                self.render_widget.redraw()
                 
                 if len(self.render_widget.points) > self.acquisition_limit:
                     self.timer.stop()
@@ -209,7 +209,7 @@ class RenderWidget(QtGui.QWidget):
         
         self.setLayout(vbox)
         
-    def paintEvent(self, e):
+    def redraw(self):
         self.axes.clear()  
         self.axes.grid(True)
         x = [point[1] for point in self.points]
