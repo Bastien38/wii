@@ -23,31 +23,16 @@ class MainWindow(QtGui.QMainWindow):
         
         # customize the UI
         self.initUI()
+
+        # init class data
+        self.initData()
         
         # connect slots
         self.connectSlots()
         
         # maximize window
         self.setWindowState(QtCore.Qt.WindowMaximized)        
-        
-    def connectSlots(self):
-        QtCore.QObject.connect(self.ui.pushButton,
-                               QtCore.SIGNAL('clicked()'), 
-                               self.connectWiiBoard)
-        QtCore.QObject.connect(self.ui.pushButton_2,
-                               QtCore.SIGNAL('clicked()'), 
-                               self.startAcquisition)
-        QtCore.QObject.connect(self.ui.pushButton_3,
-                               QtCore.SIGNAL('clicked()'),
-                                self.loadLatestAcquisition)
-
-        QtCore.QObject.connect(self.ui.pushButton_4,
-                               QtCore.SIGNAL('clicked()'),
-                                self.loadAcquisitionFileFromDisk)
-                                
-        QtCore.QObject.connect(self.ui.pushButton_5,
-                               QtCore.SIGNAL('clicked()'),
-                                self.analysis_widget.smoothData)
+       
 
     def initUI(self):    
         # acquisition tab
@@ -63,9 +48,31 @@ class MainWindow(QtGui.QMainWindow):
         # analysis tab
         self.analysis_widget = AnalysisWidget()
         self.ui.tab_2.layout().addWidget(self.analysis_widget)
+
+    def initData(self):
+        self.acquisition_mode_on = False 
+        self.board = wiiboard.Wiiboard()
+        self.acquisition_limit = 600
+        
+    def connectSlots(self):
+        QtCore.QObject.connect(self.ui.pushButton,
+                               QtCore.SIGNAL('clicked()'), 
+                               self.connectWiiBoard)
+        QtCore.QObject.connect(self.ui.pushButton_2,
+                               QtCore.SIGNAL('clicked()'), 
+                               self.startAcquisition)
+        QtCore.QObject.connect(self.ui.pushButton_3,
+                               QtCore.SIGNAL('clicked()'),
+                                self.loadLatestAcquisition)
+        QtCore.QObject.connect(self.ui.pushButton_4,
+                               QtCore.SIGNAL('clicked()'),
+                                self.loadAcquisitionFileFromDisk)                            
+        QtCore.QObject.connect(self.ui.pushButton_5,
+                               QtCore.SIGNAL('clicked()'),
+                                self.analysis_widget.smoothData)
         
     def connectWiiBoard(self):
-        board = wiiboard.Wiiboard()
+        board = self.board
         try:        
             #The wii board must be in sync mode at this time
             board.connect("00:22:4C:55:A2:32") 
@@ -73,21 +80,27 @@ class MainWindow(QtGui.QMainWindow):
             board.setLight(True)
             self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
             "Green")
-            self.board = board
-            self.ui.textEdit.append(time.ctime() + " Connection successful")
+            self.logMessage("Connection to Wii board successful")
             
         except bluetooth.btcommon.BluetoothError:
-            self.ui.textEdit.append(time.ctime() + " Connection failed")
+            self.logMessage("Connection to Wii board failed")
+
+    def logMessage(self, message, add_timestamp=True):
+        if add_timestamp:
+            message = time.ctime() + " " + message
+        self.ui.textEdit.append(message)
             
     def startAcquisition(self):
-        self.ui.textEdit.append(time.ctime() + " Starting acquisition")
-        self.ui.textEdit.append(time.ctime() + " " + str(self.board.lastEvent.totalWeight))
-        self.timer.start(1, self)
-        self.render_widget.initPoints()        
-        self.render_widget.update()
-        
-        # set acquisition limit 
-        self.acquisition_limit = 600
+        if self.board.status == "Disconnected":
+            self.logMessage("Could not start acquisition because Wii board is not connected")
+        else:
+            self.logMessage("Starting acquisition")
+            self.logMessage(str(self.board.lastEvent.totalWeight))
+            self.timer.start(1, self)
+            self.render_widget.initPoints()        
+            self.render_widget.update()
+            
+            
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
@@ -96,26 +109,26 @@ class MainWindow(QtGui.QMainWindow):
             
             if len(self.render_widget.points) > self.acquisition_limit:
                 self.timer.stop()
-                self.ui.textEdit.append(time.ctime() + " Stopping acquisition")
+                self.logMessage("Stopping acquisition")
                 np.save('acquisition.npy', self.render_widget.points)
                 
     
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
         last_event = self.board.lastEvent
-        M=last_event.totalWeight
-        TR=last_event.topRight
-        TL=last_event.topLeft
-        BR=last_event.bottomRight
-        BL=last_event.bottomLeft
-        R=TR+BR
-        L=TL+BL
-        T=TR+TL
-        B=BR+BL
-        if M>0:
+        M = last_event.totalWeight
+        TR = last_event.topRight
+        TL = last_event.topLeft
+        BR = last_event.bottomRight
+        BL = last_event.bottomLeft
+        R = TR + BR
+        L = TL + BL
+        T = TR + TL
+        B = BR + BL
+        if M > 0:
             return (time.time(), 215*(R - L)/M, 117.5*(T - B)/M)
         else:
-            return (time.time(), 0,0)
+            return (time.time(), 0, 0)
     
     def loadData(self, filename):
         data = np.load(filename)        
@@ -132,9 +145,9 @@ class MainWindow(QtGui.QMainWindow):
                 self.analysis_widget.data = self.loadData('acquisition.npy')
                 self.analysis_widget.redraw()
             except:
-                print "error reading file"
+                self.logMessage("Error reading acquisition file")
         else:
-            print "could not find acquisition file"
+            self.logMessage("Could not find acquisition file")
         
     def loadAcquisitionFileFromDisk(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 
@@ -145,9 +158,10 @@ class MainWindow(QtGui.QMainWindow):
                 self.analysis_widget.data = self.loadData(str(filename))
                 self.analysis_widget.redraw()
             except:
-                print "error reading file"
+                self.logMessage("Error reading acquisition file")
         else:
-            print "could not find acquisition file"
+            self.logMessage("Could not find acquisition file")
+        
         
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
