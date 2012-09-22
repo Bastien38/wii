@@ -143,14 +143,14 @@ class Wiiboard:
 		if state == BUTTON_DOWN_MASK:
 			buttonPressed = True
 			if not self.buttonDown:
-				pygame.event.post(pygame.event.Event(WIIBOARD_BUTTON_PRESS))
+				#pygame.event.post(pygame.event.Event(WIIBOARD_BUTTON_PRESS))
 				self.buttonDown = True
 
 		if buttonPressed == False:
 			if self.lastEvent.buttonPressed == True:
 				buttonReleased = True
 				self.buttonDown = False
-				pygame.event.post(pygame.event.Event(WIIBOARD_BUTTON_RELEASE))
+				#pygame.event.post(pygame.event.Event(WIIBOARD_BUTTON_RELEASE))
 
 		rawTR = (int(bytes[0].encode("hex"),16) << 8 ) + int(bytes[1].encode("hex"),16)
 		rawBR = (int(bytes[2].encode("hex"),16) << 8 ) + int(bytes[3].encode("hex"),16)
@@ -213,7 +213,7 @@ class Wiiboard:
 
 		self.status = "Disconnected"
 		self.disconnect()
-		pygame.event.post(pygame.event.Event(WIIBOARD_DISCONNECTED))
+		#pygame.event.post(pygame.event.Event(WIIBOARD_DISCONNECTED))
 
 	def parseCalibrationResponse(self, bytes):
 		index = 0
