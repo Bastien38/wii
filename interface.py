@@ -61,7 +61,7 @@ class MainWindow(QtGui.QMainWindow):
                                self.connectWiiBoard)
         QtCore.QObject.connect(self.ui.pushButton_2,
                                QtCore.SIGNAL('clicked()'), 
-                               self.startAcquisition)
+                               self.toggleAcquisition)
         QtCore.QObject.connect(self.ui.pushButton_3,
                                QtCore.SIGNAL('clicked()'),
                                 self.loadLatestAcquisition)
@@ -71,18 +71,22 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.ui.pushButton_5,
                                QtCore.SIGNAL('clicked()'),
                                 self.analysis_widget.smoothData)
+        QtCore.QObject.connect(self.ui.pushButton_6,
+                               QtCore.SIGNAL('clicked()'),
+                                self.saveAcquisitionAs)
         
     def connectWiiBoard(self):
-        board = self.board
-        try:        
+        board = wiiboard.Wiiboard()
+        try:
+            time.sleep(0.1)
             #The wii board must be in sync mode at this time
             board.connect("00:22:4C:55:A2:32") 
-            time.sleep(0.1)
+            time.sleep(0.1)            
             board.setLight(True)
             self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
             "Green")
             self.logMessage("Connection to Wii board successful")
-            
+            self.board = board
         except bluetooth.btcommon.BluetoothError:
             self.logMessage("Connection to Wii board failed")
 
@@ -91,29 +95,37 @@ class MainWindow(QtGui.QMainWindow):
             message = time.ctime() + " " + message
         self.ui.textEdit.append(message)
             
-    def startAcquisition(self):
-        if self.board.status == "Disconnected":
-            self.logMessage("Could not start acquisition because Wii board is not connected")
+    def toggleAcquisition(self):
+        if self.acquisition_mode_on:
+            self.acquisition_mode_on = False
+            self.ui.pushButton_2.setText(u"Lancer l'acquisition")
         else:
-            self.logMessage("Starting acquisition")
-            self.logMessage(str(self.board.lastEvent.totalWeight))
-            self.timer.start(1, self)
-            self.render_widget.initPoints()        
-            self.render_widget.update()
-            
+            if self.board.status == "Disconnected":
+                self.logMessage("Could not start acquisition because Wii board is not connected")
+            else:
+                self.logMessage("Starting acquisition")
+                self.timer.start(1, self)
+                self.render_widget.initPoints()        
+                self.render_widget.update()
+                self.acquisition_mode_on = True
+                self.ui.pushButton_2.setText(u"Stopper l'acquisition")
             
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
-            self.render_widget.points.append(self.getCurrentPosition())
-            self.render_widget.update()
-            
-            if len(self.render_widget.points) > self.acquisition_limit:
+            if self.acquisition_mode_on:
+                self.render_widget.points.append(self.getCurrentPosition())
+                self.render_widget.update()
+                
+                if len(self.render_widget.points) > self.acquisition_limit:
+                    self.timer.stop()
+                    self.logMessage("Stopping acquisition")
+                    np.save(self.save_filename, self.render_widget.points)
+                    self.logMessage("Autosaving acquisition to " + self.save_filename)
+            else:
                 self.timer.stop()
                 self.logMessage("Stopping acquisition")
-                np.save('acquisition.npy', self.render_widget.points)
                 
-    
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
         last_event = self.board.lastEvent
@@ -146,7 +158,7 @@ class MainWindow(QtGui.QMainWindow):
         
     def loadAcquisitionFileFromDisk(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 
-                                                     "Open acquisition",
+                                                     "Charger acquisition",
                                                      filter="Numpy files (*.npy)")
         self.loadAcquisitionFile(str(filename))
         
@@ -161,7 +173,13 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.logMessage("Could not find file " + filename)
         
-        
+    def saveAcquisitionAs(self):
+        if not self.acquisition_mode_on and self.render_widget.points != []:
+            filename = QtGui.QFileDialog.getSaveFileNameAndFilter(self,
+                                                                  "Sauvegarder acquisition",
+                                                                  filter="Numpy files (*.npy)")
+            np.save(filename, self.render_widget.points)
+            self.logMessage("Saving acquisition to " + self.filename)
 class RenderWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
