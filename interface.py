@@ -13,6 +13,7 @@ import matplotlib.backends.backend_qt4agg
 from PyQt4 import QtCore, QtGui, uic
 import os.path 
 from scipy.signal import filtfilt, butter
+from scipy.interpolate import interp1d
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -230,14 +231,18 @@ class AnalysisWidget(QtGui.QWidget):
     def initUI(self):
         dpi = 100
         self.fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
+        self.fig.subplots_adjust(hspace=0.45, wspace=0.3)
         self.canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self)
         
-        axes_x = self.fig.add_subplot(221)
-        axes_y = self.fig.add_subplot(222)
-        axes_xy = self.fig.add_subplot(212)
+        axes_x = self.fig.add_subplot(231)
+        axes_y = self.fig.add_subplot(232)
+        axes_xy = self.fig.add_subplot(233)
     
-        self.axes = [axes_x, axes_y, axes_xy]        
+        axes_x_fft = self.fig.add_subplot(234)
+        
+        self.axes = [axes_x, axes_y, axes_xy,
+                     axes_x_fft]        
         
         mpl_toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QTAgg(self.canvas, self)
         
@@ -283,8 +288,15 @@ class AnalysisWidget(QtGui.QWidget):
             # xy data
             self.axes[2].plot(x, y, "bo-")
             self.axes[2].set_title("x-y coordinates")
-        
-        self.canvas.draw() 
+
+            sampling_freq = 100        
+            (t, x, y) = self.resampleData(sampling_freq)
+            # x fft data
+            self.axes[3].psd(x, NFFT=len(t), pad_to=len(t), Fs=sampling_freq)
+            self.axes[3].psd(y, NFFT=len(t), pad_to=len(t)*2, Fs=sampling_freq)
+            self.axes[3].psd(y, NFFT=len(t), pad_to=len(t)*4, Fs=sampling_freq)
+            self.axes[3].set_title('zero padding x displacement')
+            self.canvas.draw() 
         
     def smoothData(self):
         def lp_filter(xn):
@@ -295,6 +307,21 @@ class AnalysisWidget(QtGui.QWidget):
         new_y = lp_filter(self.data[2])
         self.data = (new_t, new_x, new_y)
         self.redraw()
+    
+    def resampleData(self, sampling_freq=100):
+        if self.data != []:        
+            t = self.data[0]
+            x = self.data[1]
+            y = self.data[2]
+    
+            delta_t = t[-1] - t[0]
+    
+            new_t = np.linspace(0, delta_t, np.ceil(delta_t * sampling_freq))
+            def interp(data):
+                return interp1d(new_t, data, kind='linear', bounds_error=False, fill_value = 0)
+            new_x = interp(x)
+            new_y = interp(y)
+        return (new_t, new_x, new_y)
         
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
