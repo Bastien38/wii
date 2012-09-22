@@ -41,7 +41,7 @@ class MainWindow(QtGui.QMainWindow):
         self.timer = QtCore.QBasicTimer()
         # add render_widget to UI
         self.render_widget = RenderWidget()        
-        self.ui.horizontalLayout_4.addWidget(self.render_widget)
+        self.ui.tab.layout().addWidget(self.render_widget)
         #change color of UI frame to red
         self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
             "Red")
@@ -130,7 +130,7 @@ class MainWindow(QtGui.QMainWindow):
                 QtCore.QObject.connect(self.progress,
                                QtCore.SIGNAL('canceled()'), 
                                self.killAcquisition)
-        
+                self.progress.show()
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
             if self.acquisition_mode_on:
@@ -210,7 +210,7 @@ class RenderWidget(QtGui.QWidget):
     def initUI(self): 
         dpi = 100
         matplotlib.figure.Figure()
-        fig = matplotlib.figure.Figure((4.0, 4.0), dpi)
+        fig = matplotlib.figure.Figure((6.0, 6.0), dpi)
         canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
         canvas.setParent(self)
         self.canvas = canvas
