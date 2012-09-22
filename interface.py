@@ -96,11 +96,20 @@ class MainWindow(QtGui.QMainWindow):
         if add_timestamp:
             message = time.ctime() + " " + message
         self.ui.textEdit.append(message)
-            
+
+    def killAcquisition(self):
+        self.progress.cancel()
+        self.timer.stop()
+        self.logMessage("End of acquisition")
+        np.save(self.save_filename, self.render_widget.points)
+        self.logMessage("Autosaving acquisition to " + self.save_filename)
+        self.acquisition_mode_on = False                    
+        self.ui.pushButton_2.setText(u"Lancer l'acquisition")
+        self.render_widget.redraw()
+    
     def toggleAcquisition(self):
         if self.acquisition_mode_on:
-            self.acquisition_mode_on = False
-            self.ui.pushButton_2.setText(u"Lancer l'acquisition")
+            self.killAcquisition()
         else:
             if self.board.status == "Disconnected":
                 self.logMessage("Could not start acquisition because Wii board is not connected")
@@ -118,26 +127,18 @@ class MainWindow(QtGui.QMainWindow):
                                                  0,
                                                  self.acquisition_limit,
                                                  self)
-                
+                QtCore.QObject.connect(self.progress,
+                               QtCore.SIGNAL('canceled()'), 
+                               self.killAcquisition)
         
     def timerEvent(self, event):
         if event.timerId() == self.timer.timerId():
             if self.acquisition_mode_on:
                 self.render_widget.points.append(self.getCurrentPosition())
                 self.progress.setValue(len(self.render_widget.points))                
-                #self.render_widget.redraw()
                 
                 if len(self.render_widget.points) >= self.acquisition_limit:
-                    self.timer.stop()
-                    self.logMessage("Stopping acquisition")
-                    np.save(self.save_filename, self.render_widget.points)
-                    self.logMessage("Autosaving acquisition to " + self.save_filename)
-                    self.acquisition_mode_on = False                    
-                    self.ui.pushButton_2.setText(u"Lancer l'acquisition")
-            else:
-                self.timer.stop()
-                self.logMessage("Stopping acquisition")
-                self.render_widget.redraw()
+                    self.killAcquisition()
                 
     def getCurrentPosition(self):
         """returns center of mass from latest board Wii measurement"""
