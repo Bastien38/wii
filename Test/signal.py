@@ -88,7 +88,8 @@ if __name__ == "__main__":
     filt_t = lp_filter(new_t)
     filt_x = lp_filter(new_x)
     filt_y = lp_filter(new_y)
-    
+ 
+
     clf()
     subplot(2, 2, 1)
     #plot(t, x, 'o-')
