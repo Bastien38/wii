@@ -35,7 +35,7 @@ class AcquisitionWizard(QtGui.QWizard):
 
         def wizardPage2Validation():
             return self.reference_mass != 0
-        self.ui.wizardPage1.isComplete = wizardPage2Validation
+        self.ui.wizardPage2.isComplete = wizardPage2Validation
         
     def connectSlots(self):
         QtCore.QObject.connect(self.ui.pushButton,
@@ -48,7 +48,7 @@ class AcquisitionWizard(QtGui.QWizard):
             if not self.wii_board.isConnected():
                 self.wii_board.connect(discovery)
                 self.wii_board.setLight(False)
-                self.ui.lineEdit_2.setText("Connecté")
+                self.ui.lineEdit_2.setText(u"Connecté")
                 QtCore.QObject.emit(self.ui.wizardPage1,
                             QtCore.SIGNAL("completeChanged()"))
         
