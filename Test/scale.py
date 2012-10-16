@@ -115,11 +115,11 @@ class MainWindow(QtGui.QMainWindow):
             BR = last_event.bottomRight
             BL = last_event.bottomLeft
             
-            self.ui.lcdNumber.display(int(M))
-            self.ui.lcdNumber_2.display(int(TL))
-            self.ui.lcdNumber_3.display(int(TR))
-            self.ui.lcdNumber_4.display(int(BL))
-            self.ui.lcdNumber_5.display(int(BR))
+            self.ui.lcdNumber.display(float(M))
+            self.ui.lcdNumber_2.display((TL))
+            self.ui.lcdNumber_3.display((TR))
+            self.ui.lcdNumber_4.display((BL))
+            self.ui.lcdNumber_5.display((BR))
             
             
             

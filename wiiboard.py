@@ -55,6 +55,11 @@ class BoardEvent:
                          self.bottomLeft, self.bottomRight,
                          self.totalWeight]))
     
+    def data_form(self):
+        return [self.time_stamp, self.topLeft, self.topRight, 
+                         self.bottomLeft, self.bottomRight,
+                         self.totalWeight]
+    
     def spatial_coords(self, calibration_mass):
         R = self.topRight + self.bottomRight
         L = self.topLeft + self.bottomLeft
