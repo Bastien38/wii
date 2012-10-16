@@ -6,6 +6,7 @@ Created on Fri Oct 12 20:05:24 2012
 """
 import sys
 from PyQt4 import QtCore, QtGui, uic
+import numpy as np
 import wiiboard
 
 class AcquisitionWizard(QtGui.QWizard):
@@ -41,12 +42,12 @@ class AcquisitionWizard(QtGui.QWizard):
         
     def initUI(self):
         x_y_layout = QtGui.QHBoxLayout()        
-        self.x_plot = SimplePlotWidget(-250, 250)
-        self.y_plot = SimplePlotWidget(-200, 200)
+        self.x_plot = SimplePlotWidget(-250, 250, True)
+        self.y_plot = SimplePlotWidget(-200, 200, True)
         x_y_layout.addWidget(self.x_plot)        
         x_y_layout.addWidget(self.y_plot)
         self.ui.wizardPage3.layout().addLayout(x_y_layout)
-        self.x_y_plot = PathPlotWidget(-250, 250, -200, 200)
+        self.x_y_plot = PathPlotWidget(-250, 250, -200, 200, True)
         self.ui.wizardPage3.layout().addWidget(self.x_y_plot)
         for child in [self.x_plot, self.y_plot, 
                       self.x_y_plot]:
@@ -81,11 +82,33 @@ class AcquisitionWizard(QtGui.QWizard):
         QtCore.QObject.connect(self.ui.pushButton_3,
                                QtCore.SIGNAL('clicked()'), 
                                self.startAcquisition)
-                               
+            
+        QtCore.QObject.connect(self.ui.pushButton_4,
+                               QtCore.SIGNAL('clicked()'), 
+                               self.saveAcquisitionAs)
+
     def startAcquisition(self):
         self.acquisition_mode = True
-        self.acquisition_start = 0
+        self.acquisition_start = self.wii_board.lastEvent.time_stamp
+        self.acquisition_duration = float(self.ui.spinBox_2.value())
+        self.acquisition_data = []
+    
+    def stopAcquisition(self):
+        self.acquisition_mode = False
+        self.ui.progressBar.setValue(100)
+        QtGui.QMessageBox.information(self, 
+                                      u'Acquisition terminée',
+                                      u'Acquisition terminée')
+        print self.acquisition_data[:3]
         
+    def saveAcquisitionAs(self):
+        if not self.acquisition_mode:
+            filename = QtGui.QFileDialog.getSaveFileNameAndFilter(self,
+                                                                  "Sauvegarder acquisition",
+                                                                  filter="Numpy files (*.npy)")
+            filename =  str(filename[0] + ".npy")
+            np.save(filename, np.array(self.acquisition_data))
+            
     def connectWiiBoard(self):
         discovery = self.wii_board.discover()
         if discovery is not None:
@@ -106,7 +129,7 @@ class AcquisitionWizard(QtGui.QWizard):
             
             for item in data:
                 if self.acquisition_mode:
-                    
+                    self.acquisition_data.append(item.data_form())
                 coords = item.spatial_coords(self.reference_mass)
                 self.ts_x.add_data_point(item.time_stamp / 1000, 
                                          coords[0])
@@ -125,6 +148,14 @@ class AcquisitionWizard(QtGui.QWizard):
             self.x_y_plot.data = points
             self.x_y_plot.update()
             
+            if self.acquisition_mode:
+                dt = self.wii_board.lastEvent.time_stamp - self.acquisition_start
+                print dt
+                if dt / 1000000. > self.acquisition_duration:
+                    self.stopAcquisition()
+                else:
+                    self.ui.progressBar.setValue(dt/self.acquisition_duration / 1000000. * 100)
+                    
     def updateMassFromMeasures(self):
         current_weight = self.wii_board.lastEvent.totalWeight
         self.ui.lineEdit.setText(str(current_weight))
