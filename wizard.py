@@ -150,7 +150,6 @@ class AcquisitionWizard(QtGui.QWizard):
             
             if self.acquisition_mode:
                 dt = self.wii_board.lastEvent.time_stamp - self.acquisition_start
-                print dt
                 if dt / 1000000. > self.acquisition_duration:
                     self.stopAcquisition()
                 else:
