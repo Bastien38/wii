@@ -5,6 +5,7 @@ Created on Fri Oct 12 20:05:24 2012
 @author: bastien
 """
 import sys
+import datetime
 from PyQt4 import QtCore, QtGui, uic
 import numpy as np
 import wiiboard
@@ -38,7 +39,7 @@ class AcquisitionWizard(QtGui.QWizard):
         self.ts_y = TimeSeries(50, 200)
         self.acquisition_mode = False
         self.acquisition_start = None
-        self.acquisition_data = None
+        self.acquisition_data = []
         
     def initUI(self):
         x_y_layout = QtGui.QHBoxLayout()        
@@ -81,11 +82,19 @@ class AcquisitionWizard(QtGui.QWizard):
                                
         QtCore.QObject.connect(self.ui.pushButton_3,
                                QtCore.SIGNAL('clicked()'), 
-                               self.startAcquisition)
+                               self.toggleAcquisition)
             
         QtCore.QObject.connect(self.ui.pushButton_4,
                                QtCore.SIGNAL('clicked()'), 
                                self.saveAcquisitionAs)
+    
+    def toggleAcquisition(self):
+        if self.acquisition_mode:
+            self.ui.pushButton_3.setText(u'Lancer acquisition')
+            self.stopAcquisition()
+        else:
+            self.ui.pushButton_3.setText(u'Stopper acquisition')
+            self.startAcquisition()
 
     def startAcquisition(self):
         self.acquisition_mode = True
@@ -99,16 +108,22 @@ class AcquisitionWizard(QtGui.QWizard):
         QtGui.QMessageBox.information(self, 
                                       u'Acquisition terminée',
                                       u'Acquisition terminée')
-        print self.acquisition_data[:3]
         
     def saveAcquisitionAs(self):
-        if not self.acquisition_mode:
-            filename = QtGui.QFileDialog.getSaveFileNameAndFilter(self,
-                                                                  "Sauvegarder acquisition",
-                                                                  filter="Numpy files (*.npy)")
-            filename =  str(filename[0] + ".npy")
-            np.save(filename, np.array(self.acquisition_data))
-            
+        if self.acquisition_data == []:
+            QtGui.QMessageBox.critical(self, 
+                                      u'Erreur',
+                                      u"Impossible d'enregistrer: les données n'existent pas")
+        else:    
+            if not self.acquisition_mode:
+                filename = QtGui.QFileDialog.getSaveFileNameAndFilter(
+                                    self,
+                                    str(datetime.datetime.now().date()).replace('-','_') + '_' + str(datetime.datetime.now().time())[:5].replace(':','h') + 'm'
+                                    "Sauvegarder acquisition",
+                                    filter="Numpy files (*.npy)")
+                filename =  str(filename[0] + ".npy")
+                np.save(filename, np.array(self.acquisition_data))
+                
     def connectWiiBoard(self):
         discovery = self.wii_board.discover()
         if discovery is not None:
