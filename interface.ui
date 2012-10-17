@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Python + Wii</string>
+   <string>Python + Wii Balance Board</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -22,9 +22,9 @@
         <property name="currentIndex">
          <number>0</number>
         </property>
-        <widget class="QWidget" name="tab_2">
+        <widget class="QWidget" name="tab">
          <attribute name="title">
-          <string>Analyse</string>
+          <string>Explorateur</string>
          </attribute>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
@@ -37,23 +37,9 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_3">
-              <property name="text">
-               <string>Charger la dernière acquisition</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="pushButton_4">
               <property name="text">
                <string>Charger un fichier</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_5">
-              <property name="text">
-               <string>Lisser les données</string>
               </property>
              </widget>
             </item>
@@ -61,10 +47,19 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="tab">
+        <widget class="QWidget" name="tab_2">
          <attribute name="title">
-          <string>Page</string>
+          <string>Analyse</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>TextLabel</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </widget>
       </item>

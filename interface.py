@@ -5,8 +5,7 @@ Created on Fri Sep 14 21:45:26 2012
 @author: bastien
 """
 
-import sys, time, bluetooth
-import wiiboard
+import sys
 import numpy as np
 import matplotlib.figure
 import matplotlib.backends.backend_qt4agg
@@ -14,6 +13,7 @@ from PyQt4 import QtCore, QtGui, uic
 import os.path 
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
+from wizard import AcquisitionWizard
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -36,127 +36,28 @@ class MainWindow(QtGui.QMainWindow):
        
 
     def initUI(self):    
-        # acquisition tab
-        # add timer to UI
-        self.timer = QtCore.QBasicTimer()
-        # add render_widget to UI
-        self.render_widget = RenderWidget()        
-        self.ui.tab.layout().addWidget(self.render_widget)
-        #change color of UI frame to red
-        self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
-            "Red")
+        # display tab
+        # add display_widget to UI
+        self.display_widget = DisplayWidget()        
+        self.ui.tab.layout().addWidget(self.display_widget)
         
         # analysis tab
         self.analysis_widget = AnalysisWidget()
         self.ui.tab_2.layout().addWidget(self.analysis_widget)
 
     def initData(self):
-        self.acquisition_mode_on = False 
-        self.board = wiiboard.Wiiboard()        
-        self.time_out = 1000. / self.ui.spinBox.value()        
-        self.acquisition_limit = self.ui.spinBox.value() * self.ui.spinBox_2.value()        
-        self.save_filename = "acquisition.npy"
+        self.wizard = None
         
     def connectSlots(self):
         QtCore.QObject.connect(self.ui.pushButton,
-                               QtCore.SIGNAL('clicked()'), 
-                               self.connectWiiBoard)
-        QtCore.QObject.connect(self.ui.pushButton_2,
-                               QtCore.SIGNAL('clicked()'), 
-                               self.toggleAcquisition)
-        QtCore.QObject.connect(self.ui.pushButton_3,
                                QtCore.SIGNAL('clicked()'),
-                                self.loadLatestAcquisition)
+                                self.openAcquisitionWizard)                            
+        
         QtCore.QObject.connect(self.ui.pushButton_4,
                                QtCore.SIGNAL('clicked()'),
                                 self.loadAcquisitionFileFromDisk)                            
-        QtCore.QObject.connect(self.ui.pushButton_5,
-                               QtCore.SIGNAL('clicked()'),
-                                self.analysis_widget.smoothData)
-        QtCore.QObject.connect(self.ui.pushButton_6,
-                               QtCore.SIGNAL('clicked()'),
-                                self.saveAcquisitionAs)
         
-    def connectWiiBoard(self):
-        board = wiiboard.Wiiboard()
-        try:
-            time.sleep(0.1)
-            #The wii board must be in sync mode at this time
-            board.connect("00:22:4C:55:A2:32") 
-            time.sleep(0.1)            
-            board.setLight(True)
-            self.ui.frame.setStyleSheet("QWidget { background-color: %s }" %  
-            "Green")
-            self.logMessage("Connection to Wii board successful")
-            self.board = board
-        except bluetooth.btcommon.BluetoothError:
-            self.logMessage("Connection to Wii board failed")
 
-    def logMessage(self, message, add_timestamp=True):
-        if add_timestamp:
-            message = time.ctime() + " " + message
-        self.ui.textEdit.append(message)
-
-    def killAcquisition(self):
-        self.progress.cancel()
-        self.timer.stop()
-        self.logMessage("End of acquisition")
-        np.save(self.save_filename, self.render_widget.points)
-        self.logMessage("Autosaving acquisition to " + self.save_filename)
-        self.acquisition_mode_on = False                    
-        self.ui.pushButton_2.setText(u"Lancer l'acquisition")
-        self.render_widget.redraw()
-    
-    def toggleAcquisition(self):
-        if self.acquisition_mode_on:
-            self.killAcquisition()
-        else:
-            if self.board.status == "Disconnected":
-                self.logMessage("Could not start acquisition because Wii board is not connected")
-            else:
-                self.logMessage("Starting acquisition")
-                self.time_out = 1000. / self.ui.spinBox.value()        
-                self.acquisition_limit = self.ui.spinBox.value() * self.ui.spinBox_2.value()
-                self.timer.start(self.time_out, self)
-                self.render_widget.initPoints()        
-                self.render_widget.update()
-                self.acquisition_mode_on = True
-                self.ui.pushButton_2.setText(u"Stopper l'acquisition")
-                self.progress = QtGui.QProgressDialog("Acquisition en cours",
-                                                 "Stopper l'acquisition",
-                                                 0,
-                                                 self.acquisition_limit,
-                                                 self)
-                QtCore.QObject.connect(self.progress,
-                               QtCore.SIGNAL('canceled()'), 
-                               self.killAcquisition)
-                self.progress.show()
-    def timerEvent(self, event):
-        if event.timerId() == self.timer.timerId():
-            if self.acquisition_mode_on:
-                self.render_widget.points.append(self.getCurrentPosition())
-                self.progress.setValue(len(self.render_widget.points))                
-                
-                if len(self.render_widget.points) >= self.acquisition_limit:
-                    self.killAcquisition()
-                
-    def getCurrentPosition(self):
-        """returns center of mass from latest board Wii measurement"""
-        last_event = self.board.lastEvent
-        M = last_event.totalWeight
-        TR = last_event.topRight
-        TL = last_event.topLeft
-        BR = last_event.bottomRight
-        BL = last_event.bottomLeft
-        R = TR + BR
-        L = TL + BL
-        T = TR + TL
-        B = BR + BL
-        if M > 0:
-            return (time.time(), 215*(R - L)/M, 117.5*(T - B)/M)
-        else:
-            return (time.time(), 0, 0)
-    
     def loadData(self, filename):
         data = np.load(filename)        
         t = data[:, 0]
@@ -166,9 +67,6 @@ class MainWindow(QtGui.QMainWindow):
         y = data[:, 2]
         return (t, x, y)
         
-    def loadLatestAcquisition(self):
-        filename = self.save_filename
-        self.loadAcquisitionFile(filename)
         
     def loadAcquisitionFileFromDisk(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 
@@ -180,23 +78,25 @@ class MainWindow(QtGui.QMainWindow):
         if os.path.exists(filename): 
             try:
                 self.analysis_widget.data = self.loadData(filename)                
-                self.logMessage("Loaded file " + filename)
             except:
-                self.logMessage("Error reading file " + filename)
+                pass
         else:
-            self.logMessage("Could not find file " + filename)
+            pass
         self.analysis_widget.redraw()
         
-    def saveAcquisitionAs(self):
-        if not self.acquisition_mode_on and self.render_widget.points != []:
-            filename = QtGui.QFileDialog.getSaveFileNameAndFilter(self,
-                                                                  "Sauvegarder acquisition",
-                                                                  filter="Numpy files (*.npy)")
-            filename =  str(filename[0] + ".npy")
-            np.save(filename, self.render_widget.points)
-            self.logMessage("Saving acquisition to " + filename)
+    def openAcquisitionWizard(self):
+        if self.wizard == None:
+            self.wizard = AcquisitionWizard()
             
-class RenderWidget(QtGui.QWidget):
+            QtCore.QObject.connect(self.wizard,
+                               QtCore.SIGNAL('finished(int)'), 
+                               self.resetWizard)
+                               
+            self.wizard.show()
+    def resetWizard(self, value):
+        self.wizard = None
+
+class DisplayWidget(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
         
