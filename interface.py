@@ -41,7 +41,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.tab.layout().addWidget(self.display_widget)
         
         # analysis tab
-        self.analysis_widget = AnalysisWidget()
+        self.analysis_widget = AnalysisWidget(self.ui.tab_2.layout())
         self.ui.tab_2.layout().addWidget(self.analysis_widget)
 
     def initData(self):
@@ -73,11 +73,10 @@ class MainWindow(QtGui.QMainWindow):
             self.analysis_widget.setData(dataAnalyzer)
         self.display_widget.redraw()
         self.analysis_widget.redraw()
-        self.updateIndicators()
+ 
 
-    def updateIndicators(self):
-        if self.current_data != []:
-            self.ui.lineEdit.setText(str(self.current_data.lengthPath()))
+    
+    
             
     
         
@@ -177,9 +176,11 @@ class DisplayWidget(QtGui.QWidget):
     
     
 class AnalysisWidget(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, layout):
         QtGui.QWidget.__init__(self)
         
+        self.children_layout = layout
+
         self.initData()
 
         self.initUI()
@@ -209,6 +210,36 @@ class AnalysisWidget(QtGui.QWidget):
         vbox.addWidget(mpl_toolbar)
         
         self.setLayout(vbox)
+        
+        # list of indicators to be calculated for each acquisition
+        indicator_labels = [u"Longueur du statokinésigramme (mm)", 
+                            u"Position moyenne selon X (mm)",
+                            u"Position moyenne selon Y (mm)",
+                            u"Vitesse instantanée moyenne (mm / ms)",
+                            u"Vitesse instantanée moyenne selon X (mm / ms)",
+                            u"Vitesse instantanée moyenne selon Y (mm / ms)"]
+                            
+        functions = [WiiBoardDataAnalyzer.lengthPath,
+                     WiiBoardDataAnalyzer.meanX,
+                     WiiBoardDataAnalyzer.meanY,
+                     WiiBoardDataAnalyzer.meanSpeed,
+                     WiiBoardDataAnalyzer.meanXSpeed,
+                     WiiBoardDataAnalyzer.meanYSpeed]
+        
+        self.child_widgets = []
+        for ind, label in enumerate(indicator_labels):
+            text_label = QtGui.QLabel(QtCore.QString(label))
+            data_label = QtGui.QLineEdit(str(''))
+            data_label.setReadOnly(True)
+            HBoxLayout = QtGui.QHBoxLayout()
+            HBoxLayout.addWidget(text_label)
+            HBoxLayout.addWidget(data_label)
+            self.child_widgets.append([text_label, 
+                                       data_label, 
+                                       functions[ind]])
+            self.children_layout.addLayout(HBoxLayout)
+            
+            
         self.redraw()
         
     def initData(self):
@@ -222,54 +253,111 @@ class AnalysisWidget(QtGui.QWidget):
             t = self.data.t
             x = self.data.x
             y = self.data.y
-            m = self.data.m
+
             for ax in self.axes:        
                 ax.clear()  
                 ax.grid(True)
 
             # x data
-            self.axes[0].plot(t, x)
-            self.axes[0].set_title("x displacement")
-            self.axes[0].plot(t, x.min() * np.ones(x.shape))
-            self.axes[0].text(t.max(), 1.05 * x.min(), '%d'%int(x.min()),
-                ha='center', va='bottom')
-            self.axes[0].plot(t, x.max() * np.ones(x.shape))            
-            self.axes[0].text(t.max(), 1.05 * x.max(), '%d'%int(x.max()),
-                ha='center', va='top')
+            self.axes[0].hist(x[1:] - x[:-1], 20)
+            self.axes[0].set_title("Histogramme $dx$")
 
             # y data
-            self.axes[1].plot(t, y)
-            self.axes[1].set_title("y displacement")
-            self.axes[1].plot(t, y.min() * np.ones(y.shape))
-            self.axes[1].text(t.max(), 1.05 * y.min(), '%d'%int(y.min()),
-                ha='center', va='bottom')
-            self.axes[1].plot(t, y.max() * np.ones(y.shape))            
-            self.axes[1].text(t.max(), 1.05 * y.max(), '%d'%int(y.max()),
-                ha='center', va='top')
+            self.axes[1].hist(y[1:] - y[:-1], 20)
+            self.axes[1].set_title("Histogramme $dy$")
             
-            # m data
-            self.axes[2].plot(t, m)
-            self.axes[2].set_title("mass")            
-            
-            # xy data
-            self.axes[3].plot(x, y, "bo-")
-            self.axes[3].set_title("x-y coordinates")
+            # fft data
+            [Y_fft, f_fft] = self.data.fftXY()
+            fr, Yfft = self.data.fftXY()
+            self.axes[2].plot(f_fft[1:-1], abs(Y_fft[1:-1]))
+            self.axes[2].set_title(u"FFT déplacement XY")            
+            self.axes[2].set_xlabel(u"Fréquence (Hz)")
 
-#            sampling_freq = 500        
-#            (t, x, y) = self.resampleData(sampling_freq)
-#            
-#            # x fft data
-#            self.axes[3].psd(x, NFFT=len(t), pad_to=len(t), Fs=sampling_freq)
-#            self.axes[3].set_xlim(0, 5)            
-#            self.axes[3].set_title('x displacement')
-#            
-#            # y fft data
-#            self.axes[4].psd(y, NFFT=len(t), pad_to=len(t), Fs=sampling_freq)
-#            self.axes[4].set_xlim(0, 5)
-#            self.axes[4].set_title('y displacement')
-                        
-            self.canvas.draw() 
+            
+            # xy ellipse data
+            from matplotlib.patches import Ellipse
+
+            def plot_point_cov(points, nstd=2, ax=None, **kwargs):
+                """
+            Plots an `nstd` sigma ellipse based on the mean and covariance of a point
+            "cloud" (points, an Nx2 array).
+            
+            Parameters
+            ----------
+            points : An Nx2 array of the data points.
+            nstd : The radius of the ellipse in numbers of standard deviations.
+            Defaults to 2 standard deviations.
+            ax : The axis that the ellipse will be plotted on. Defaults to the
+            current axis.
+            Additional keyword arguments are pass on to the ellipse patch.
+            
+            Returns
+            -------
+            A matplotlib ellipse artist
+            """
+                pos = points.mean(axis=0)
+                cov = np.cov(points, rowvar=False)
+                return plot_cov_ellipse(cov, pos, nstd, ax, **kwargs)
+            
+            def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
+                """
+            Plots an `nstd` sigma error ellipse based on the specified covariance
+            matrix (`cov`). Additional keyword arguments are passed on to the
+            ellipse patch artist.
+            
+            Parameters
+            ----------
+            cov : The 2x2 covariance matrix to base the ellipse on
+            pos : The location of the center of the ellipse. Expects a 2-element
+            sequence of [x0, y0].
+            nstd : The radius of the ellipse in numbers of standard deviations.
+            Defaults to 2 standard deviations.
+            ax : The axis that the ellipse will be plotted on. Defaults to the
+            current axis.
+            Additional keyword arguments are pass on to the ellipse patch.
+            
+            Returns
+            -------
+            A matplotlib ellipse artist
+            """
+                def eigsorted(cov):
+                    vals, vecs = np.linalg.eigh(cov)
+                    order = vals.argsort()[::-1]
+                    return vals[order], vecs[:,order]
         
+#                if ax is None:
+#                    ax = plt.gca()
+            
+                vals, vecs = eigsorted(cov)
+                theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+            
+                # Width and height are "full" widths, not radius
+                width, height = 2 * nstd * np.sqrt(vals)
+                ellip = Ellipse(xy=pos, width=width, height=height, angle=theta, **kwargs)
+            
+                ax.add_artist(ellip)
+                return ellip
+            
+            points=np.vstack((x,y)).transpose()
+            # Plot the raw points...
+            x1, y1 = points.T
+
+            self.axes[3].plot(x1, y1, 'ro')
+            
+            plot_point_cov(points, nstd=1.8, alpha=0.5, color='green', ax=self.axes[3])
+            
+
+#            plt.specgram(delta_depl,scale_by_freq=True, NFFT=100,Fs=1/(t[1]-t[0]),pad_to=300, noverlap=99,xextent=(t[0],t[-1]),interpolation='nearest', cmap='jet',window=window_hanning)#,pad_to=1000
+#            plt.xlabel('Temps (s)')
+#            plt.ylabel('Fréquence (Hz)')
+            
+            self.canvas.draw() 
+            
+            # indicators
+            for item in self.child_widgets:
+                t, data_label, func = item
+                data_label.setText(str(func(self.data)))
+                
     
     def resampleData(self, sampling_freq=100):
         if self.data != []:        
@@ -311,6 +399,7 @@ class WiiBoardDataAnalyzer(object):
         mean_dt = dt.mean()
         t = np.concatenate((np.array([0.]), np.cumsum(dt)))
         sampled_t = np.linspace(0, t.max(), np.ceil(t.max() / mean_dt))
+        self.dt = mean_dt        
         self.t = sampled_t
         self.m = interp1d(t, m)(sampled_t)
         self.x = interp1d(t, x)(sampled_t)
@@ -322,6 +411,53 @@ class WiiBoardDataAnalyzer(object):
         dx2 = dx * dx
         dy2 = dy * dy
         return np.sqrt(dx2 + dy2).sum()
+    
+    def meanSpeed(self):
+        dx = self.x[1:] - self.x[:-1]
+        dy = self.y[1:] - self.y[:-1]
+        dx2 = dx * dx
+        dy2 = dy * dy
+        return np.sqrt((dx2 + dy2) / self.dt).sum()
+    
+    def meanXSpeed(self):
+        dx = self.x[1:] - self.x[:-1]
+        dx2 = dx * dx
+        return np.sqrt((dx2) / self.dt).sum()
+        
+    def meanYSpeed(self):
+        dy = self.y[1:] - self.y[:-1]
+        dy2 = dy * dy
+        return np.sqrt((dy2) / self.dt).sum()
+        
+    def meanX(self):
+        return self.x.mean()
+        
+    def meanY(self):
+        return self.y.mean()
+        
+    def fftXY(self):
+        def fonct_fft(tps,signal):
+            Nt = len(tps)
+            Te = tps[1] - tps[0]
+            fe = 1 / Te * 1e6
+            f0 = fe / Nt   #pour l'abscisse de la fft
+                
+            Y = np.fft.fft(signal)
+            
+            N_lim=np.fix(Nt/2)-1
+            
+            Y_fft=Y[0:N_lim-1]
+            f_fft=np.arange(0.,N_lim-1)*f0
+            
+            return [Y_fft,f_fft]
+            
+        dx = self.x[1:] - self.x[:-1]
+        dy = self.y[1:] - self.y[:-1]
+        dx2 = dx * dx
+        dy2 = dy * dy
+        delta_xy = np.sqrt(dx2 + dy2)
+        
+        return fonct_fft(self.t, delta_xy)
         
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
