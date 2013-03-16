@@ -108,6 +108,7 @@ class AcquisitionWizard(QtGui.QWizard):
         QtGui.QMessageBox.information(self, 
                                       u'Acquisition terminée',
                                       u'Acquisition terminée')
+        self.ui.pushButton_3.setText(u'Lancer acquisition')
         
     def saveAcquisitionAs(self):
         if self.acquisition_data == []:
@@ -121,7 +122,8 @@ class AcquisitionWizard(QtGui.QWizard):
                                     str(datetime.datetime.now().date()).replace('-','_') + '_' + str(datetime.datetime.now().time())[:5].replace(':','h') + 'm'
                                     "Sauvegarder acquisition",
                                     filter="Numpy files (*.npy)")
-                filename =  str(filename[0] + ".npy")
+                d= datetime.datetime.now()
+                filename =  str(d.strftime("%Y%m%d") + "_" + d.strftime("%H%M%S") + "_" + filename[0] + ".npy")
                 np.save(filename, np.array(self.acquisition_data))
                 
     def connectWiiBoard(self):
@@ -137,7 +139,7 @@ class AcquisitionWizard(QtGui.QWizard):
                 
     def timerEvent(self, event):
         if event.timerId() == self.mass_timer.timerId():
-            self.ui.lcdNumber.display(self.wii_board.lastEvent.totalWeight)
+            self.ui.lcdNumber.display(np.log(self.wii_board.lastEvent.totalWeight+36.5))
 
         if event.timerId() == self.display_timer.timerId():
             data = self.wii_board.getQueuedEvents()
