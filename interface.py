@@ -258,21 +258,43 @@ class AnalysisWidget(QtGui.QWidget):
                 ax.clear()  
                 ax.grid(True)
 
-            # x data
-            self.axes[0].hist(x[1:] - x[:-1], 20)
-            self.axes[0].set_title("Histogramme $dx$")
+#            # x data
+#            self.axes[0].hist(x[1:] - x[:-1], 20)
+#            self.axes[0].set_title("Histogramme $dx$")
+#
+#            # y data
+#            self.axes[1].hist(y[1:] - y[:-1], 20)
+#            self.axes[1].set_title("Histogramme $dy$")
+            
+            self.axes[0].plot(t, x)
+            self.axes[0].set_title("x displacement")
+            self.axes[0].plot(t, x.min() * np.ones(x.shape))
+            self.axes[0].text(t.max(), 1.05 * x.min(), '%d'%int(x.min()),
+                ha='center', va='bottom')
+            self.axes[0].plot(t, x.max() * np.ones(x.shape))            
+            self.axes[0].text(t.max(), 1.05 * x.max(), '%d'%int(x.max()),
+                ha='center', va='top')
 
             # y data
-            self.axes[1].hist(y[1:] - y[:-1], 20)
-            self.axes[1].set_title("Histogramme $dy$")
+            self.axes[1].plot(t, y)
+            self.axes[1].set_title("y displacement")
+            self.axes[1].plot(t, y.min() * np.ones(y.shape))
+            self.axes[1].text(t.max(), 1.05 * y.min(), '%d'%int(y.min()),
+                ha='center', va='bottom')
+            self.axes[1].plot(t, y.max() * np.ones(y.shape))            
+            self.axes[1].text(t.max(), 1.05 * y.max(), '%d'%int(y.max()),
+                ha='center', va='top')
+                        
             
             # fft data
             [Y_fft, f_fft] = self.data.fftXY()
             fr, Yfft = self.data.fftXY()
-            self.axes[2].plot(f_fft[1:-1], abs(Y_fft[1:-1]))
+            self.axes[2].semilogx(f_fft[1:-1], abs(Y_fft[1:-1]))
+            self.axes[2].set_xlim(0.01,20)
+            self.axes[2].semilogx([0.5,0.5],[0,max(abs(Y_fft[1:-1]))],'r')
+            self.axes[2].semilogx([2,2],[0,max(abs(Y_fft[1:-1]))],'r')
             self.axes[2].set_title(u"FFT déplacement XY")            
             self.axes[2].set_xlabel(u"Fréquence (Hz)")
-
             
             # xy ellipse data
             from matplotlib.patches import Ellipse
@@ -332,9 +354,16 @@ class AnalysisWidget(QtGui.QWidget):
                 theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
             
                 # Width and height are "full" widths, not radius
+    
                 width, height = 2 * nstd * np.sqrt(vals)
                 ellip = Ellipse(xy=pos, width=width, height=height, angle=theta, **kwargs)
-            
+#TODO                
+                print 'theta =' + str(-theta+90) + '°'
+                print 'largeur = ' + str(height) + ' mm'
+                print 'hauteur = ' + str(width) + ' mm'
+                print 'aire = ' + str(np.pi * width * height) + ' mm²'
+                
+                
                 ax.add_artist(ellip)
                 return ellip
             
@@ -342,11 +371,25 @@ class AnalysisWidget(QtGui.QWidget):
             # Plot the raw points...
             x1, y1 = points.T
 
-            self.axes[3].plot(x1, y1, 'ro')
+            #self.axes[3].plot(x1, y1, '.')
+            self.axes[3].plot([-102.5,-102.5,-102.5,102.5,102.5,102.5,102.5,-102.5],[-58.75,58.75,58.75,58.75,58.75,-58.75,-58.75,-58.75])            
+            self.axes[3].set_xlim(-110,110)
+            self.axes[3].set_ylim(-60,60)
             
-            plot_point_cov(points, nstd=1.8, alpha=0.5, color='green', ax=self.axes[3])
-            
-
+            plot_point_cov(points, nstd=1.8, alpha=1, color='green', ax=self.axes[3])
+            #self.axes[3].plot(x1, y1, 'b.',linewidth=0.2)
+#TODO            
+#            #nouv Bastien à coder
+#            vals, vecs = eigsorted(cov)
+#            theta = -np.degrees(np.arctan2(*vecs[:,0][::-1]))+90
+#            
+#
+#            width, height = 2 * 1.8 * np.sqrt(vals) 
+#
+#         'aire = ' + format(np.pi * width * height,'1.2f') + ' mm²'
+#         'largeur / hauteur = ' + format(height/width,'1.2f') 
+#         'LFS = ' + format(L / (np.pi * width * height),'1.2f') + ' mm^(⁻1)'
+    
 #            plt.specgram(delta_depl,scale_by_freq=True, NFFT=100,Fs=1/(t[1]-t[0]),pad_to=300, noverlap=99,xextent=(t[0],t[-1]),interpolation='nearest', cmap='jet',window=window_hanning)#,pad_to=1000
 #            plt.xlabel('Temps (s)')
 #            plt.ylabel('Fréquence (Hz)')
@@ -356,7 +399,7 @@ class AnalysisWidget(QtGui.QWidget):
             # indicators
             for item in self.child_widgets:
                 t, data_label, func = item
-                data_label.setText(str(func(self.data)))
+                data_label.setText(str('%.1f' % func(self.data)))
                 
     
     def resampleData(self, sampling_freq=100):
@@ -381,7 +424,7 @@ class WiiBoardDataAnalyzer(object):
 
         # get raw data series        
         raw_data = np.load(str(filename))                
-        t = raw_data[:, 0]
+        t = raw_data[:, 0]*1e-6         #t in seconds
         tl = raw_data[:, 1]
         tr = raw_data[:, 2]
         bl = raw_data[:, 3]
@@ -394,6 +437,15 @@ class WiiBoardDataAnalyzer(object):
         B = br + bl
         x, y = (215 * (R - L) / reference_mass, 
                          117.5 * (T - B) / reference_mass)
+          
+        #eliminate incoherent points in the raw signal (if the mass deviates more than 1kg from the mean mass)               
+        ss = abs(m - reference_mass)
+        for i1,dev in enumerate(ss):
+            if (dev > 1) & (i1 <> 0) & (i1 <> np.size(ss) -1):
+                m[i1] = 0.5 * (m[i1+1] + m[i1-1])
+                x[i1] = 0.5 * (x[i1+1] + x[i1-1])
+                y[i1] = 0.5 * (y[i1+1] + y[i1-1])
+                       
         # interpolate the raw data on uniform scale and store
         dt = t[1:] - t[:-1]
         mean_dt = dt.mean()
@@ -439,7 +491,7 @@ class WiiBoardDataAnalyzer(object):
         def fonct_fft(tps,signal):
             Nt = len(tps)
             Te = tps[1] - tps[0]
-            fe = 1 / Te * 1e6
+            fe = 1 / Te
             f0 = fe / Nt   #pour l'abscisse de la fft
                 
             Y = np.fft.fft(signal)
@@ -451,13 +503,16 @@ class WiiBoardDataAnalyzer(object):
             
             return [Y_fft,f_fft]
             
-        dx = self.x[1:] - self.x[:-1]
+        dx = self.x[1:] - self.x[:-1] #!!!!pourquoi delta???
         dy = self.y[1:] - self.y[:-1]
         dx2 = dx * dx
         dy2 = dy * dy
         delta_xy = np.sqrt(dx2 + dy2)
         
-        return fonct_fft(self.t, delta_xy)
+        return fonct_fft(self.t, delta_xy-delta_xy.mean())
+        
+        
+
         
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
