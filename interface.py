@@ -14,6 +14,12 @@ import os.path
 from scipy.interpolate import interp1d
 from wizard import AcquisitionWizard
 
+try:
+    from PyQt4.QtCore import QString
+except ImportError:
+    # we are using Python3 so QString is not defined
+    QtCore.QString = type("")
+
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
