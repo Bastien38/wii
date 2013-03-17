@@ -216,14 +216,15 @@ class AnalysisWidget(QtGui.QWidget):
         vbox.addWidget(mpl_toolbar)
         
         self.setLayout(vbox)
-        
+        #TODO
         # list of indicators to be calculated for each acquisition
         indicator_labels = [u"Longueur du statokinésigramme (mm)", 
                             u"Position moyenne selon X (mm)",
                             u"Position moyenne selon Y (mm)",
                             u"Vitesse instantanée moyenne (mm / ms)",
                             u"Vitesse instantanée moyenne selon X (mm / ms)",
-                            u"Vitesse instantanée moyenne selon Y (mm / ms)"]
+                            u"Vitesse instantanée moyenne selon Y (mm / ms)",
+                            u""]
                             
         functions = [WiiBoardDataAnalyzer.lengthPath,
                      WiiBoardDataAnalyzer.meanX,
@@ -273,7 +274,7 @@ class AnalysisWidget(QtGui.QWidget):
 #            self.axes[1].set_title("Histogramme $dy$")
             
             self.axes[0].plot(t, x)
-            self.axes[0].set_title("x displacement")
+            self.axes[0].set_title(u"déplacement en x")
             self.axes[0].plot(t, x.min() * np.ones(x.shape))
             self.axes[0].text(t.max(), 1.05 * x.min(), '%d'%int(x.min()),
                 ha='center', va='bottom')
@@ -283,7 +284,7 @@ class AnalysisWidget(QtGui.QWidget):
 
             # y data
             self.axes[1].plot(t, y)
-            self.axes[1].set_title("y displacement")
+            self.axes[1].set_title(u"déplacement en y")
             self.axes[1].plot(t, y.min() * np.ones(y.shape))
             self.axes[1].text(t.max(), 1.05 * y.min(), '%d'%int(y.min()),
                 ha='center', va='bottom')
