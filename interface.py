@@ -231,7 +231,8 @@ class AnalysisWidget(QtGui.QWidget):
                      WiiBoardDataAnalyzer.meanY,
                      WiiBoardDataAnalyzer.meanSpeed,
                      WiiBoardDataAnalyzer.meanXSpeed,
-                     WiiBoardDataAnalyzer.meanYSpeed]
+                     WiiBoardDataAnalyzer.meanYSpeed,
+                     None]
         
         self.child_widgets = []
         for ind, label in enumerate(indicator_labels):
@@ -265,14 +266,7 @@ class AnalysisWidget(QtGui.QWidget):
                 ax.clear()  
                 ax.grid(True)
 
-#            # x data
-#            self.axes[0].hist(x[1:] - x[:-1], 20)
-#            self.axes[0].set_title("Histogramme $dx$")
-#
-#            # y data
-#            self.axes[1].hist(y[1:] - y[:-1], 20)
-#            self.axes[1].set_title("Histogramme $dy$")
-            
+            # x data plot
             self.axes[0].plot(t, x)
             self.axes[0].set_title(u"déplacement en x")
             self.axes[0].plot(t, x.min() * np.ones(x.shape))
@@ -282,7 +276,7 @@ class AnalysisWidget(QtGui.QWidget):
             self.axes[0].text(t.max(), 1.05 * x.max(), '%d'%int(x.max()),
                 ha='center', va='top')
 
-            # y data
+            # y data plot
             self.axes[1].plot(t, y)
             self.axes[1].set_title(u"déplacement en y")
             self.axes[1].plot(t, y.min() * np.ones(y.shape))
@@ -303,76 +297,6 @@ class AnalysisWidget(QtGui.QWidget):
             self.axes[2].set_title(u"FFT déplacement XY")            
             self.axes[2].set_xlabel(u"Fréquence (Hz)")
             
-            # xy ellipse data
-            from matplotlib.patches import Ellipse
-
-            def plot_point_cov(points, nstd=2, ax=None, **kwargs):
-                """
-            Plots an `nstd` sigma ellipse based on the mean and covariance of a point
-            "cloud" (points, an Nx2 array).
-            
-            Parameters
-            ----------
-            points : An Nx2 array of the data points.
-            nstd : The radius of the ellipse in numbers of standard deviations.
-            Defaults to 2 standard deviations.
-            ax : The axis that the ellipse will be plotted on. Defaults to the
-            current axis.
-            Additional keyword arguments are pass on to the ellipse patch.
-            
-            Returns
-            -------
-            A matplotlib ellipse artist
-            """
-                pos = points.mean(axis=0)
-                cov = np.cov(points, rowvar=False)
-                return plot_cov_ellipse(cov, pos, nstd, ax, **kwargs)
-            
-            def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
-                """
-            Plots an `nstd` sigma error ellipse based on the specified covariance
-            matrix (`cov`). Additional keyword arguments are passed on to the
-            ellipse patch artist.
-            
-            Parameters
-            ----------
-            cov : The 2x2 covariance matrix to base the ellipse on
-            pos : The location of the center of the ellipse. Expects a 2-element
-            sequence of [x0, y0].
-            nstd : The radius of the ellipse in numbers of standard deviations.
-            Defaults to 2 standard deviations.
-            ax : The axis that the ellipse will be plotted on. Defaults to the
-            current axis.
-            Additional keyword arguments are pass on to the ellipse patch.
-            
-            Returns
-            -------
-            A matplotlib ellipse artist
-            """
-                def eigsorted(cov):
-                    vals, vecs = np.linalg.eigh(cov)
-                    order = vals.argsort()[::-1]
-                    return vals[order], vecs[:,order]
-        
-#                if ax is None:
-#                    ax = plt.gca()
-            
-                vals, vecs = eigsorted(cov)
-                theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
-            
-                # Width and height are "full" widths, not radius
-    
-                width, height = 2 * nstd * np.sqrt(vals)
-                ellip = Ellipse(xy=pos, width=width, height=height, angle=theta, **kwargs)
-#TODO                
-                print 'theta =' + str(-theta+90) + '°'
-                print 'largeur = ' + str(height) + ' mm'
-                print 'hauteur = ' + str(width) + ' mm'
-                print 'aire = ' + str(np.pi * width * height) + ' mm²'
-                
-                
-                ax.add_artist(ellip)
-                return ellip
             
             points=np.vstack((x,y)).transpose()
             # Plot the raw points...
@@ -518,7 +442,74 @@ class WiiBoardDataAnalyzer(object):
         
         return fonct_fft(self.t, delta_xy-delta_xy.mean())
         
+        def covarianceEllipse(self):
+            from matplotlib.patches import Ellipse
+
+            def plot_point_cov(points, nstd=2, ax=None, **kwargs):
+                """
+            Plots an `nstd` sigma ellipse based on the mean and covariance of a point
+            "cloud" (points, an Nx2 array).
+            
+            Parameters
+            ----------
+            points : An Nx2 array of the data points.
+            nstd : The radius of the ellipse in numbers of standard deviations.
+            Defaults to 2 standard deviations.
+            ax : The axis that the ellipse will be plotted on. Defaults to the
+            current axis.
+            Additional keyword arguments are pass on to the ellipse patch.
+            
+            Returns
+            -------
+            A matplotlib ellipse artist
+            """
+                pos = points.mean(axis=0)
+                cov = np.cov(points, rowvar=False)
+                return plot_cov_ellipse(cov, pos, nstd, ax, **kwargs)
+            
+            def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
+                """
+            Plots an `nstd` sigma error ellipse based on the specified covariance
+            matrix (`cov`). Additional keyword arguments are passed on to the
+            ellipse patch artist.
+            
+            Parameters
+            ----------
+            cov : The 2x2 covariance matrix to base the ellipse on
+            pos : The location of the center of the ellipse. Expects a 2-element
+            sequence of [x0, y0].
+            nstd : The radius of the ellipse in numbers of standard deviations.
+            Defaults to 2 standard deviations.
+            ax : The axis that the ellipse will be plotted on. Defaults to the
+            current axis.
+            Additional keyword arguments are pass on to the ellipse patch.
+            
+            Returns
+            -------
+            A matplotlib ellipse artist
+            """
+                def eigsorted(cov):
+                    vals, vecs = np.linalg.eigh(cov)
+                    order = vals.argsort()[::-1]
+                    return vals[order], vecs[:,order]
         
+                vals, vecs = eigsorted(cov)
+                theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+            
+                # Width and height are "full" widths, not radius
+    
+                width, height = 2 * nstd * np.sqrt(vals)
+                ellip = Ellipse(xy=pos, width=width, height=height, angle=theta, **kwargs)
+#TODO                
+                print 'theta =' + str(-theta+90) + '°'
+                print 'largeur = ' + str(height) + ' mm'
+                print 'hauteur = ' + str(width) + ' mm'
+                print 'aire = ' + str(np.pi * width * height) + ' mm²'
+                
+                
+                ax.add_artist(ellip)
+                return ellip
+                    
 
         
 if __name__ == "__main__":
